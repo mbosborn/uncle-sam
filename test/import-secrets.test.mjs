@@ -224,7 +224,9 @@ test('import --init creates the private paste file once and never overwrites it;
 });
 
 test('import refuses a secrets or paste file that git would not ignore', async () => {
-  const stray = path.join(root, 'test', `.not-ignored-${process.pid}.json`);
+  // Avoid hyphens: a four-digit PID made the old name match the Google-key
+  // ignore rule (*-????????????.json) on Linux CI.
+  const stray = path.join(root, 'test', `.not_ignored_${process.pid}.json`);
   writeFileSync(stray, JSON.stringify(example));
   try {
     const r = await run([], { env: { UNCLE_SAM_SECRETS_FILE: stray } });
