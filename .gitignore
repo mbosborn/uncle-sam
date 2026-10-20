@@ -1,0 +1,29 @@
+node_modules/
+node_modules
+.vercel/
+.local/
+
+# Secrets: keep every real value out of git. Only the example file is tracked.
+.env*
+!.env.secrets.example.json
+
+.DS_Store
+*.log
+
+# Plain-text form Project pastes secrets into; imported into .env.secrets.json and then blanked
+PASTE-SECRETS-HERE.txt
+
+# Google service-account key files (downloaded as <project>-<12 hex>.json); imported, never committed
+*-????????????.json
+*service-account*.json
+
+# FUSE mount leftovers
+.fuse_hidden*
+msg.txt
+.vercel
+
+# Local documents and generated output
+Claude outputs/
+*.pdf
+*.zip
+*.tar.gz

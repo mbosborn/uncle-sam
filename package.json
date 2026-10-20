@@ -1,0 +1,29 @@
+{
+  "name": "uncle-sam",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Recruiting Coordinator",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "node scripts/dev-server.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "setup:import": "node scripts/import-secrets.mjs",
+    "setup:slack": "node scripts/slack-bootstrap.mjs",
+    "setup:check": "node scripts/setup.mjs check",
+    "setup:env": "node scripts/setup.mjs env",
+    "setup:verify": "node scripts/setup.mjs verify"
+  },
+  "dependencies": {
+    "@libsql/client": "0.18.0",
+    "@vercel/functions": "3.10.1",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299"
+  },
+  "devDependencies": {
+    "drizzle-orm": "0.45.2"
+  }
+}

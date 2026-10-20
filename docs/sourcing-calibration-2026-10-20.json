@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "role": "rl-coding-environments",
+  "updatedAt": "2026-10-20",
+  "approvedBy": "Example coordinator",
+  "basis": "Synthetic examples demonstrating role-specific calibration.",
+  "requireEvidence": true,
+  "indiaOnly": true,
+  "criteria": [
+    "India-based only; any seniority. Prior leadership titles are fine when current evidence establishes hands-on technical work.",
+    "Prioritize demonstrated ownership of RL/coding environments, tasks, verifiers/rewards, synthetic-data pipelines, model/agent evaluation or benchmarking, or post-training infrastructure.",
+    "Require concrete profile evidence of building, designing or owning relevant systems. Generic RAG/agent wrappers, annotation-only RLHF labels, cloud/MLOps or backend titles do not suffice by themselves.",
+    "Company brand, school prestige, follower count, source scores and similarity to a colleague do not establish fit. Explain actual work with an exact supporting profile quote.",
+    "Return fewer than ten, including zero, when evidence is insufficient; never pad with unselected profiles. Preserve explicit sourcing exclusions and keep existing candidates/examples out of a new prospect batch."
+  ],
+  "examples": [
+    {
+      "name": "Spencer Miller",
+      "linkedin": "https://www.linkedin.com/in/sample-spencer/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Built synthetic data generation and model evaluation pipelines for an example software team."
+    },
+    {
+      "name": "Sydney Vaughn K",
+      "linkedin": "https://www.linkedin.com/in/sample-sydney/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Owned async RL infrastructure, post-training observability, fine-tuning and agent benchmarking."
+    },
+    {
+      "name": "Jules S Nash",
+      "linkedin": "https://www.linkedin.com/in/sample-jules/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Designed coding environments, reasoning benchmarks, synthetic training tasks and evaluation frameworks."
+    },
+    {
+      "name": "Avery James Carter",
+      "linkedin": "https://www.linkedin.com/in/sample-2dc6e42baca6/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Built task packaging, verifiers, reward checks and evaluation workflows for example coding agents."
+    },
+    {
+      "name": "Rylan King",
+      "linkedin": "https://www.linkedin.com/in/sample-d670ff375f59/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Owned environment QA, synthetic task-generation recipes, parameterized verifiers and rollouts."
+    },
+    {
+      "name": "Dylan Hayes",
+      "linkedin": "https://www.linkedin.com/in/sample-ca1df630ee6d/",
+      "basis": "Synthetic example; no real candidate evaluation.",
+      "evidence": "Built synthetic-data pipelines, capability evaluations and benchmarking. This synthetic example is not a completed work trial or hiring outcome."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "2026-10-20.1",
+  "documentType": "ciiaa",
+  "provenance": {
+    "description": "Observed production document extracted with PDF.js on 2026-10-20. Candidate overlay slots generalized; NDA wrong-name slots corrected in the expected schema. This is a content-integrity baseline, not legal approval.",
+    "sourceSha256": "79440250d866282fc711dad02e2ed049b7ff5087963b4b570a7e00abccc9e3f5",
+    "observedAt": "2026-10-20",
+    "parser": "pdfjs-dist@5.6.205"
+  },
+  "candidateNameOccurrences": [
+    0,
+    0,
+    1,
+    0
+  ],
+  "allowedImageOperationsPerPage": [
+    1,
+    0,
+    0,
+    0
+  ],
+  "pages": [
+    "CONFIDENTIAL INFORMATION & INVENTION ASSIGN- MENT AGREEMENT (CIIAA) This Confidential Information & Invention Assignment Agreement (\"Agreement\") is entered into by and between Company Artificial Intelligence Corporation, including its subsidiaries, affiliates, successors, assigns, and operating divisions such as Company Studio (collectively, the \"Company\"), and the individual or entity accepting this Agreement (\"Contractor\" or \"You\"). Effective Date: ______________________ 1. Purpose In connection with your work for the Company, you may receive access to Confidential Information and may create intellectual property, data, annotations, or other work product. This Agreement governs confidentiality, ownership, and assignment of such materials. 2. Definition of Confidential Information \"Confidential Information\" means all non-public information disclosed by or on behalf of the Company or its clients, whether in written, oral, visual, electronic, or other form, including but not limited to: Client data, datasets, prompts, labels, annotations, metadata, reviews, ratings, and feedback; Training, validation, testing, and evaluation data; Software, source code, internal tools, models, workflows, and system architecture; Business plans, pricing, contracts, financial information, and strategies; Access credentials, security procedures, and platform configurations; Personal data and any information subject to data protection laws. Confidential Information does not include information that is publicly available through no fault of Contractor or lawfully obtained without restriction from a third party. 3. Confidentiality Obligations 3.1 Non-Disclosure. Contractor agrees to hold all Confidential Information in strict confidence and not to disclose it to any third party without prior written authorization.",
+    "3.2 Limited Use. Confidential Information may be used solely for performing authorized services for the Company. 3.3 Safeguards. Contractor shall implement reasonable administrative, technical, and physical safeguards to protect Confidential Information. 3.4 No Retention. Upon request or termination, Contractor must promptly return or permanently delete all Confidential Information. 3.5 Survival. These obligations survive termination of your relationship with the Company. 4. Intellectual Property Definitions 4.1 Intellectual Property (\"IP\"). All inventions, works of authorship, data, software, models, documentation, annotations, labels, reviews, improvements, derivatives, discoveries, and other intellectual property of any kind, whether or not protectable. 4.2 Developed IP. Any IP that is created, conceived, authored, discovered, reduced to practice, or otherwise developed by Contractor, alone or jointly, in connection with: Services provided to the Company; Use of Company or client data, tools, or Confidential Information; Tasks or projects assigned by the Company. 4.3 Excluded IP. IP that Contractordeveloped entirely prior to the engagement, without use of Company resources, and unrelated to the Company's business. 5. Ownership & Assignment 5.1 Work Made for Hire. To the maximum extent permitted by law, all Developed IP constitutes a \"work made for hire\" owned exclusively by the Company or its designees. 5.2 Assignment. To the extent any Developed IP does not qualify as a work made for hire, Contractor hereby irrevocably assigns all right, title, and interest worldwide in such Developed IP to the Company. 5.3 Moral Rights Waiver. Contractor waives any and all moral rights to the fullest extent permitted by law. 5.4 Client Ownership. Contractor acknowledges that Developed IP may be assigned to Company clients as required by Company agreements. 6. Records & Cooperation",
+    "Contractor agrees to: Maintain accurate records of Developed IP; Promptly disclose Developed IP to the Company; Execute documents necessary to secure IP rights. Contractor appoints the Company as attorney-in-fact solely for executing IP-related documents if Contractor fails to do so. 7. Artificial Intelligence & Data Restrictions Contractor shall not: Input Company or client data into unauthorized AI systems; Train or fine-tune models using Company data; Retain datasets or outputs after project completion; Use outputs for personal or competitive purposes. 8. No Conflicts Contractor represents that performance of services does not violate any prior obligations and that Contractor has full authority to enter into this Agreement. 9. Injunctive Relief Contractor acknowledges that breach of this Agreement may cause irreparable harm and that the Company may seek injunctive relief in addition to other remedies. 10. Governing Law This Agreement shall be governed by the laws of the State of California, without regard to conflict of laws principles. 11. Entire Agreement This Agreement constitutes the entire agreement regarding confidentiality and IP and supersedes any prior agreements on these subjects. BY ACCEPTING THIS AGREEMENT, YOU CONFIRM THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE LEGALLY BOUND BY ITS TERMS. Company Artificial Intelligence ______________________ Signature: __________________ Name: ______________________ Title: ______________________ {{candidateName}}",
+    "Signature: ______________________ Name: ______________________ Title: ______________________ Date: ______________________ Date: __________________"
+  ],
+  "allowedImagesPerPage": [
+    [
+      {
+        "sha256": "44736adff5b13d9ba26fb0746dc932aa105cc57a3d970f4dbead3a6f3ea94f88",
+        "width": 166,
+        "height": 154,
+        "kind": 3,
+        "description": "Company logo; visually inspected from source NDA page 1. At most one; no candidate content."
+      }
+    ],
+    [],
+    [],
+    []
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "source": "collection://c4d27962-20e2-49ce-b694-f3b4cacddc05",
+  "verifiedOn": "2026-10-13 America/Los_Angeles",
+  "properties": {
+    "Candidate brief": {
+      "type": "text",
+      "description": "Current brief: 3–6 labeled lines for status, assessment, dated evidence and open items. Actions belong in Next action; detailed prior notes and links belong in Supporting history. This field does not trigger the daily recap."
+    },
+    "Next action": {
+      "type": "text",
+      "description": ""
+    },
+    "Action Status": {
+      "type": "select",
+      "description": "",
+      "options": [
+        "Needs Project",
+        "Meeting Booked",
+        "Waiting on Candidate",
+        "On Trial",
+        "Awaiting Team Decision",
+        "Awaiting Feedback",
+        "On Hold",
+        "Complete"
+      ]
+    },
+    "Color mode": {
+      "type": "select",
+      "description": "Automatic follows Action Status. Choosing a dot color saves a manual override. Choose Automatic in Dot color or Color mode to resume status-based colors.",
+      "options": [
+        "Automatic",
+        "Manual override"
+      ]
+    },
+    "Dot color": {
+      "type": "select",
+      "description": "",
+      "options": [
+        "Automatic",
+        "🔴 Red",
+        "🔵 Blue",
+        "🟡 Yellow",
+        "🟣 Purple",
+        "🟢 Green",
+        "⚪ Gray"
+      ]
+    }
+  }
+}

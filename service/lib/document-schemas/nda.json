@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "2026-10-20.1",
+  "documentType": "nda",
+  "provenance": {
+    "description": "Observed production document extracted with PDF.js on 2026-10-20. Candidate overlay slots generalized; NDA wrong-name slots corrected in the expected schema. This is a content-integrity baseline, not legal approval.",
+    "sourceSha256": "6bc270dc008c8917c967dc78f4e64eedc6f379a5f0b045320da051ca588ba8e4",
+    "observedAt": "2026-10-20",
+    "parser": "pdfjs-dist@5.6.205"
+  },
+  "candidateNameOccurrences": [
+    2,
+    0,
+    1
+  ],
+  "allowedImageOperationsPerPage": [
+    1,
+    0,
+    0
+  ],
+  "pages": [
+    "NONDISCLOSURE AGREEMENT This Nondisclosure Agreement (\"Agreement\") is made and entered into effective as of (the \"Effective Date\"), by and between Company Artificial Intelligence Corporation and ______________________. Company AI and ______________________may each be referred to herein individually as a \"party\" and collectively as the \"parties.\" 1. Purpose The parties wish to explore a business opportunity of mutual interest and, in connection with that opportunity, each party may disclose (\"Disclosing Party\") to the other (\"Receiving Party\") certain confidential, technical, and business information. The parties desire that all such information be treated as confidential under the terms of this Agreement. 2. Confidential Information \"Confidential Information\" means any non-public, proprietary information disclosed by either party--whether in writing, orally, or by inspection--so long as it is (a) marked or identified as confidential or (b) would reasonably be understood as confidential under the circumstances. Confidential Information does not include information that the Receiving Party can demonstrate: 1. was publicly available before disclosure; 2. becomes publicly available through no breach of this Agreement; 3. was already lawfully in the Receiving Party's possession without restriction; 4. was rightfully received from a third party without breach of duty; or 5. was independently developed without use of the Disclosing Party's Confidential Information. 3. Non-Use and Nondisclosure The Receiving Party will (a) use the Disclosing Party's Confidential Information solely to evaluate or pursue a potential business relationship, and (b) disclose it only to employees, contractors, advisors, or affiliates (\"Representatives\") who need to know it and who are bound by obligations at least as protective as those in this Agreement. If compelled by law or court order to disclose Confidential Information, the Receiving Party will give the Disclosing Party prompt notice (to the _______ {{candidateName}} {{candidateName}}",
+    "extent legally permitted) and cooperate, at the Disclosing Party's expense, in seeking a protective order. 4. Protection of Confidential Information Each party agrees to protect the other party's Confidential Information using the same degree of care it uses for its own most sensitive information, and in no event less than a reasonable degree of care. 5. No Obligation Nothing in this Agreement obligates either party to proceed with any transaction or relationship. 6. No Warranty ALL CONFIDENTIAL INFORMATION IS PROVIDED \"AS IS,\" WITHOUT ANY WARRANTY, EX- PRESS OR IMPLIED, INCLUDING WARRANTIES OF ACCURACY OR COMPLETENESS. 7. Return or Destruction of Materials Upon written request, the Receiving Party will promptly return or destroy all Confidential Informa- tion, except that (i) one archival copy may be retained for legal compliance and (ii) Confidential Information stored in routine back-up files may be retained until deleted in the ordinary course. 8. No License No license to use any intellectual-property rights of the Disclosing Party is granted or implied except the limited right to evaluate the potential business relationship. 9. Term This Agreement--and each party's duty to protect Confidential Information--remains in effect for one (1) year from the Effective Date. 10. Remedies Each party acknowledges that unauthorized disclosure or use of Confidential Information may cause irreparable harm and agrees that the Disclosing Party may seek injunctive relief in addition to any other remedies available at law or equity.",
+    "11. Miscellaneous This Agreement is the entire understanding between the parties regarding confidentiality and supersedes any prior agreements on that subject. It may be amended only by a written instrument signed by both parties. Failure to enforce any provision is not a waiver. This Agreement is governed by the laws of the State of California, without regard to conflict-of-laws principles. Accepted and Agreed: Company Artificial Intelligence Signature Name: Title: Date: ______________________ Signature: __________________ Name: ______________________ Title: ______________________ Date: __________________ ______________________ ______________________ __________________ {{candidateName}}"
+  ],
+  "allowedImagesPerPage": [
+    [
+      {
+        "sha256": "44736adff5b13d9ba26fb0746dc932aa105cc57a3d970f4dbead3a6f3ea94f88",
+        "width": 166,
+        "height": 154,
+        "kind": 3,
+        "description": "Company logo; visually inspected from source NDA page 1. At most one; no candidate content."
+      }
+    ],
+    [],
+    []
+  ]
+}

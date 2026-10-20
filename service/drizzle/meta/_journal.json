@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791950087664,
+      "tag": "0000_unknown_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791950207295,
+      "tag": "0001_motionless_doctor_doom",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791951538090,
+      "tag": "0002_candidate_threads",
+      "breakpoints": true
+    }
+  ]
+}

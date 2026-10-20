@@ -1,0 +1,465 @@
+{
+  "version": "2026-10-20.1",
+  "sourceTemplateId": "596b3287-75fc-489d-95e1-c595a542f34e",
+  "sourceModifiedAt": "2026-10-15T12:52:03.0300000Z",
+  "provenance": "Read-only export from DocuSign Oct20; observed layout, not legal approval. NDA party fields populated from candidate; document revision dates preserved.",
+  "fields": [
+    {
+      "kind": "nda",
+      "role": "Company",
+      "type": "signHereTabs",
+      "page": 3,
+      "x": 106,
+      "y": 266,
+      "label": "Signature 4b82a99f-eef1-4cd0-b91c-d1e933956f21",
+      "required": null,
+      "optional": "false",
+      "presentation": {
+        "scaleValue": "1"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Company",
+      "type": "signHereTabs",
+      "page": 4,
+      "x": 133,
+      "y": 46,
+      "label": "Signature c4fa2e9c-4ef4-437d-8a1a-e385ff1d7f3d",
+      "required": null,
+      "optional": "false",
+      "presentation": {
+        "scaleValue": "1"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Company",
+      "type": "fullNameTabs",
+      "page": 3,
+      "x": 118,
+      "y": 320,
+      "label": "Name b9cfbfa2-4484-44bd-8897-7126bcb31d02",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Company",
+      "type": "fullNameTabs",
+      "page": 4,
+      "x": 117,
+      "y": 87,
+      "label": "Name fb3e0a70-ea16-41bd-855e-47674c1549d0",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Company",
+      "type": "dateSignedTabs",
+      "page": 3,
+      "x": 100,
+      "y": 357,
+      "label": "Date Signed 72c80145-a066-4928-b89d-de9f3c9f3a7c",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Company",
+      "type": "dateSignedTabs",
+      "page": 1,
+      "x": 167,
+      "y": 284,
+      "label": "Date Signed f0d0d9a2-0206-4e62-b27f-8f8c52871818",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Company",
+      "type": "dateSignedTabs",
+      "page": 4,
+      "x": 107,
+      "y": 121,
+      "label": "Date Signed 0bf85255-4670-4add-b626-b9198e272c16",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Company",
+      "type": "titleTabs",
+      "page": 3,
+      "x": 110,
+      "y": 339,
+      "label": "Title 19d25ca8-579c-4581-8c21-74f7cfdca583",
+      "required": "true",
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Company",
+      "type": "titleTabs",
+      "page": 4,
+      "x": 116,
+      "y": 105,
+      "label": "Title fb86c5c9-53cc-499e-871d-89a920685dff",
+      "required": "true",
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Signer",
+      "type": "signHereTabs",
+      "page": 3,
+      "x": 416,
+      "y": 229,
+      "label": "Signature 63f95a2c-b18a-4687-ac85-15ebc7dcd538",
+      "required": null,
+      "optional": "false",
+      "presentation": {
+        "scaleValue": "1"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Signer",
+      "type": "signHereTabs",
+      "page": 3,
+      "x": 404,
+      "y": 643,
+      "label": "Signature 7a235e92-3278-4310-ad7b-20ce065d98c0",
+      "required": null,
+      "optional": "false",
+      "presentation": {
+        "scaleValue": "1"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "Signer",
+      "type": "signHereTabs",
+      "page": 34,
+      "x": 145,
+      "y": 172,
+      "label": "Signature c0fa8c05-2679-4356-8f20-38d3528670f8",
+      "required": null,
+      "optional": "false",
+      "presentation": {
+        "scaleValue": "1"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Signer",
+      "type": "fullNameTabs",
+      "page": 3,
+      "x": 382,
+      "y": 268,
+      "label": "Name 8d75a5b4-8d6a-4807-acf0-7fa210410935",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Signer",
+      "type": "fullNameTabs",
+      "page": 3,
+      "x": 383,
+      "y": 682,
+      "label": "Name e3324ddd-53fa-446d-9c22-7bf25fa30056",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "Signer",
+      "type": "fullNameTabs",
+      "page": 34,
+      "x": 122,
+      "y": 212,
+      "label": "Name 5370b2d6-27a4-4dd9-9058-78834ddff629",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Signer",
+      "type": "dateSignedTabs",
+      "page": 1,
+      "x": 56,
+      "y": 208,
+      "label": "Date Signed fd20d3c3-2dc9-4dfd-a9f2-ad73e7e85c8f",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Signer",
+      "type": "dateSignedTabs",
+      "page": 3,
+      "x": 365,
+      "y": 303,
+      "label": "Date Signed 05d921f1-5c8d-4583-b43f-855e2589b49d",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Signer",
+      "type": "dateSignedTabs",
+      "page": 4,
+      "x": 374,
+      "y": 66,
+      "label": "Date Signed 3c1dad12-878f-4a81-a47c-23ca84c3d908",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "Signer",
+      "type": "dateSignedTabs",
+      "page": 34,
+      "x": 109,
+      "y": 246,
+      "label": "Date Signed 4070fe17-c7e0-4087-9beb-7c5bbefac17c",
+      "required": null,
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "Signer",
+      "type": "titleTabs",
+      "page": 3,
+      "x": 372,
+      "y": 287,
+      "label": "Title 65ed5edf-afa9-474c-8c25-1729f577b0ce",
+      "required": "true",
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "ciiaa",
+      "role": "Signer",
+      "type": "titleTabs",
+      "page": 3,
+      "x": 388,
+      "y": 699,
+      "label": "Title f7d230e6-5144-497b-827a-4ff42c62ef3a",
+      "required": "true",
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "Signer",
+      "type": "titleTabs",
+      "page": 34,
+      "x": 118,
+      "y": 229,
+      "label": "Title 7b492529-7773-40f8-b6a9-b3cf216037ca",
+      "required": "true",
+      "optional": null,
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "0",
+        "height": "0",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "prefill",
+      "type": "textTabs",
+      "page": 1,
+      "x": 100,
+      "y": 224,
+      "label": "Text 2d8a1a62-26e1-4774-a194-eeb8182e1244",
+      "value": "{{candidateName}}",
+      "required": "true",
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "84",
+        "height": "22",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "nda",
+      "role": "prefill",
+      "type": "textTabs",
+      "page": 1,
+      "x": 306,
+      "y": 222,
+      "label": "Text 080faca2-06b8-4c10-904b-7e79761280ae",
+      "value": "{{candidateName}}",
+      "required": "true",
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "84",
+        "height": "22",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "prefill",
+      "type": "dateTabs",
+      "page": 1,
+      "x": 206,
+      "y": 187,
+      "label": "Text 59c7decf-070c-4214-acab-4e22bbd70b92",
+      "value": "10/15/2026",
+      "required": "true",
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "84",
+        "height": "22",
+        "disableAutoSize": "false"
+      }
+    },
+    {
+      "kind": "terms",
+      "role": "prefill",
+      "type": "dateTabs",
+      "page": 1,
+      "x": 381,
+      "y": 188,
+      "label": "Text 2405b0b1-e632-4b28-ad89-c1b7e9f01888",
+      "value": "10/15/2026",
+      "required": "true",
+      "presentation": {
+        "font": "arial",
+        "fontColor": "black",
+        "fontSize": "size9",
+        "width": "84",
+        "height": "22",
+        "disableAutoSize": "false"
+      }
+    }
+  ]
+}

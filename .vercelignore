@@ -1,0 +1,18 @@
+# Nothing below is needed by the deployed functions (api/ + service/lib + dependencies are traced automatically).
+.git
+.env*
+PASTE-SECRETS-HERE.txt
+.vercel
+.local
+node_modules
+test
+service/node_modules
+service/.next
+service/dist
+service/.wrangler
+service/.sites-runtime
+service/.openai
+service/.env*
+*service-account*.json
+Claude outputs
+docs
