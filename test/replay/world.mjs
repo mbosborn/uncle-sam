@@ -76,15 +76,22 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
         assert.ok(matched, `unknown calendar event: ${input.eventId}`);
         return { id: input.eventId };
       }
-      const id = `series${w.calendarWrites.length}`, body = input.body;
+      const body = input.body, id = body.id ?? `series${w.calendarWrites.length}`;
+      const rdates = body.recurrence?.find(r => r.startsWith('RDATE:'));
+      const parseStamp = s => Date.parse(s.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/, '$1-$2-$3T$4:$5:$6Z'));
+      const startAt = Date.parse(body.start.dateTime ?? `${body.start.date}T00:00:00Z`);
+      const length = Date.parse(body.end.dateTime ?? `${body.end.date}T00:00:00Z`) - startAt;
       const count = Number(/COUNT=(\d+)/.exec(body.recurrence?.[0] ?? '')?.[1] ?? 1);
       assert.ok(count <= 21, 'fixture recurrence bound');
-      if (body.recurrence) assert.equal(body.start.timeZone, 'Asia/Kolkata', 'fixture expands only fixed-offset India recurrences');
-      for (let i = 0; i < count; i++) {
+      if (body.recurrence && !rdates) assert.equal(body.start.timeZone, 'Asia/Kolkata', 'legacy fixture expands only fixed-offset India recurrences');
+      const starts = rdates ? [...new Set([startAt, ...rdates.slice(6).split(',').map(parseStamp)])].sort((a,b)=>a-b)
+        : Array.from({length:count},(_,i)=>startAt+i*86400_000);
+      assert.ok(starts.length <= 21 && starts.every(Number.isFinite), 'fixture explicit recurrence bound');
+      for (const [i, occurrence] of starts.entries()) {
         const event = { id: body.recurrence ? `${id}_${i}` : id, ...(body.recurrence ? { recurringEventId: id } : {}),
-          originalStart: new Date(Date.parse(body.start.dateTime ?? `${body.start.date}T00:00:00Z`) + i * 86400_000).toISOString(),
-          start: new Date(Date.parse(body.start.dateTime ?? `${body.start.date}T00:00:00Z`) + i * 86400_000).toISOString(),
-          end: new Date(Date.parse(body.end.dateTime ?? `${body.end.date}T00:00:00Z`) + i * 86400_000).toISOString(),
+          originalStart: new Date(occurrence).toISOString(),
+          start: new Date(occurrence).toISOString(),
+          end: new Date(occurrence + length).toISOString(),
           allDay: !!body.start.date, status: 'confirmed', summary: body.summary, description: body.description,
           transparent: body.transparency === 'transparent', attendees: clone(body.attendees ?? []), organizer: 'project@company.example',
           ...(body.conferenceData ? { meetUrl: 'https://meet.google.com/abc-defg-hij' } : {}) };

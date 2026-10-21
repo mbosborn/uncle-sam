@@ -17,7 +17,10 @@
 import { masonConfirmedDates } from './project-trial-dates.mjs';
 import { locationAskNote } from './trial-location.mjs';
 import { noticeStore } from './stuck-rejections.mjs';
-import { createCheckins, bestDailyTimes, ptTime, CHECKIN_TITLE } from './checkins.mjs';
+import { ptTime, CHECKIN_TITLE } from './checkins.mjs';
+import { jointPlan, readPlanningBusy, slotsStillFree, MAX_TRIALS, MAX_DAYS } from './checkin-joint-plan.mjs';
+import { bookPlannedCheckins, bookingReservations } from './checkin-booking.mjs';
+import { randomUUID } from 'node:crypto';
 import { candidateAddress } from './onboarding.mjs';
 import { trialTimeZone, zonedHM, zonedDate } from './checkin-times.mjs';
 import { holdReason } from './email-queue.mjs';
@@ -76,8 +79,9 @@ export async function teamGuests({ calendar, now }) {
  * "as soon as their email is created, uncle sam should do the calendar search, pick out optimal times for check ins based on my
  * rules and then put them on the calendar. literally as soon as the email is created as long as the top banner"). Only once the
  * email exists ("only create their check-ins once they've actually created their email", Project, later that day): it comes 48
- * hours before the start once signed, or 12 hours before when unsigned (onboarding.mjs). Okta is not waited for. India-time trials: the best times from Robin's, Interviewer's and Taylor's calendars
- * (checkins.mjs bestDailyTimes); anyone else: Project is asked once for the times. Once per trial (kv checkins:<pageId>).
+ * hours before the start once signed, or 12 hours before when unsigned (onboarding.mjs). Okta is not waited for. Ready trials
+ * share a bounded plan against the team calendars, using each candidate's confirmed time zone. Unknown zones require
+ * clarification. Once per trial (kv checkins:<pageId>), with durable reservations and receipts for partial setup.
  * emailReady: the caller already knows the email exists. -> a reason string.
  */
 /**
@@ -95,15 +99,16 @@ export async function datesAgreed({ kv, candidate }) {
   return !TENTATIVE.test(words) && !AWAITING.test(words);
 }
 
-export async function ensureCheckins({ db, calendar, canWrite = false, candidate, poster = null, notion = null, clock = Date.now, emailReady = false, bannerKnown = false }) {
+async function prepareCheckins({ db, calendar, canWrite = false, candidate, poster = null, notion = null, clock = Date.now, emailReady = false, bannerKnown = false, skipRegistration = false }) {
   try {
     if (!db?.prepare || !candidate?.pageId) return 'no_candidate';
     const kv = noticeStore(db), now = clock(), today = laDate(now), f = candidate.fields ?? {};
-    if (await holdReason({ kv, candidate }) || f['Action Status'] === 'On Hold') return 'candidate_on_hold';
-    if (await kv.get(`checkins:${candidate.pageId}`)) return 'already_set_up';
+    if (candidate.archived || ['Closed', 'Hired'].includes(f.Stage) || await holdReason({ kv, candidate }) || f['Action Status'] === 'On Hold') return 'candidate_on_hold';
+    const registered = await kv.get(`checkins:${candidate.pageId}`);
+    if (registered && !skipRegistration) return registered.creating ? 'checkin_creation_needs_review' : 'already_set_up';
     const start = dayOnly(f['Trial Start']), end = dayOnly(f['Trial End']);
     if (!start || !end || end < start) return 'dates_not_confirmed';
-    if (TENTATIVE.test(`${f['Next action'] ?? ''} ${f['Candidate brief'] ?? ''}`) && !(await masonConfirmedDates({ kv, pageId: candidate.pageId, start, end }))) return 'dates_not_confirmed';
+    if (!(await datesAgreed({ kv, candidate }))) return 'dates_not_confirmed';
     if (end < today) return 'trial_over';
     // Check-ins only once the Company email exists (Project, 2026-10-19: "the check ins are only put once his email is complete"),
     // and they go to that work email, never the personal one ("don't use there personal email for check ins only work email").
@@ -136,23 +141,76 @@ export async function ensureCheckins({ db, calendar, canWrite = false, candidate
       : candidateAddress([f['Next action'], f['Candidate brief'], ...notes.map(n => n.text)].filter(Boolean).join(' '), candidate.fullName);
     const theirToday = zonedDate(now, tz);
     const from = start > theirToday ? start : theirToday;
-    // Settle day one's times first. Later days may adapt; a majority-of-days optimum must not compromise the first invite.
-    const best = await bestDailyTimes({ calendar, start: from, end: from, now, tz });
-    if (!best.read || best.clashDays.morning || best.clashDays.night) {
-      const reason = !best.read ? 'team_calendar_unreadable' : 'first_day_no_verified_slot';
-      if (poster && await kv.claim(`checkins:setup-held:${candidate.pageId}:${from}:${reason}`, { at: now }, now))
-        await poster(`📅 ${name}'s check-ins need attention: ${!best.read ? 'I could not verify the team calendars' : 'no verified first-day slot fits'}. I have not promised a first time and will retry the calendar check.`).catch(() => {});
-      return reason;
-    }
-    const made = await createCheckins({ db, calendar, who: { pageId: candidate.pageId, fullName: candidate.fullName, workEmail }, start: from, end, trialStart: start, clock, tz, morning: best.morning, night: best.night });
-    if (made.reason !== 'created') return made.reason;
-    try { await notion?.appendCandidateNote?.({ pageId: candidate.pageId, text: `${today} · Daily 15-minute morning and night check-ins with Robin, Interviewer and Taylor created for ${md(from)} – ${md(end)}, at times picked from their calendars (by Uncle Sam).` }); } catch { /* the events carry it */ }
-    const clashes = best.clashDays.morning + best.clashDays.night;
-    const place = tz === 'Asia/Kolkata' ? 'India' : tzFrom ?? tz;
-    void clashes; void place;
-    if (poster) await poster(`📅 ${name}'s check-ins are on the calendar, ${md(from)} – ${md(end)}: ${[made.morning && `mornings ${ptTime(made.morning)} PT`, made.night && `nights ${ptTime(made.night)} PT`].filter(Boolean).join(', ')}${workEmail ? `, sent to ${workEmail}` : "; I'll add their Company email once I have it"}.`).catch(() => {});
-    return 'created';
+    if ((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400_000 >= MAX_DAYS) return 'trial_too_long';
+    return { candidate, tz, tzFrom, start: from, end, trialStart: start, workEmail, name, today, emailReady };
   } catch (error) { return `checkins_failed:${error?.code ?? 'failed'}`; }
+}
+
+const planningLeaseKey = 'checkins:planning-lease';
+const binding = p => JSON.stringify([p.candidate.pageId, p.candidate.fullName, p.candidate.email, p.trialStart, p.start, p.end, p.tz, p.workEmail]);
+
+/** All setup entry points share one bounded planner and one reservation lease. */
+export async function ensureCheckins(options) {
+  const { db, notion = null, calendar, clock = Date.now, poster = null, candidate } = options;
+  if (!db?.prepare || !candidate?.pageId) return 'no_candidate';
+  const kv = noticeStore(db), now = clock(), old = await kv.get(planningLeaseKey);
+  if (old?.expiresAt > now) return 'joint_planning_busy';
+  const lease = { token: randomUUID(), expiresAt: now + 10 * 60_000 };
+  if (!(await kv.compareAndSwap(planningLeaseKey, old, lease, now))) return 'joint_planning_busy';
+  try {
+    const first = await prepareCheckins(options);
+    if (typeof first === 'string') return first;
+    if (typeof notion?.readControl === 'function' && (await notion.readControl())?.mode !== 'Live') return 'not_live';
+    let peers = [];
+    if (typeof notion?.listTrialCandidates === 'function') {
+      try { peers = await notion.listTrialCandidates(); } catch { return 'trial_list_unreadable'; }
+      if (!Array.isArray(peers)) return 'trial_list_unreadable';
+    }
+    const prepared = [first];
+    for (const peer of peers.filter(p => p.pageId !== candidate.pageId).sort((a, b) => String(a.fields?.['Trial Start']).localeCompare(String(b.fields?.['Trial Start'])) || a.pageId.localeCompare(b.pageId))) {
+      if (prepared.length >= MAX_TRIALS) break;
+      const p = await prepareCheckins({ ...options, candidate: peer, poster: null, emailReady: false, bannerKnown: false });
+      if (typeof p !== 'string') prepared.push(p);
+    }
+    let busy;
+    try { busy = await readPlanningBusy({ calendar, trials: prepared, now, reservations: await bookingReservations(db, { now }) }); }
+    catch { return 'team_calendar_unreadable'; }
+    const result = jointPlan({ trials: prepared, busy, now });
+    const outcomes = new Map();
+    for (const plan of result.plans) {
+      if (!plan.slots.length || plan.slots.some(s => s.at === null)) {
+        outcomes.set(plan.candidate.pageId, 'joint_plan_incomplete');
+        if (poster && await kv.claim(`checkins:setup-held:${plan.candidate.pageId}:${plan.start}:joint_plan_incomplete`, { at: now }, now))
+          await poster(`📅 ${plan.name}'s full check-in schedule does not fit the verified calendars yet. I have not created invitations; I will recheck the available times.`).catch(() => {});
+        continue;
+      }
+      const validate = async ({ eventIds }) => {
+        const reservations = await bookingReservations(db, { excludePageId: plan.candidate.pageId, now: clock() });
+        const currentBusy = await readPlanningBusy({ calendar, trials: [plan], now: clock(), reservations, ignoreIds: eventIds });
+        if (!slotsStillFree({ plan, busy: currentBusy, now: clock() })) throw Error('calendar_changed');
+        const fresh = typeof notion?.getCandidate === 'function' ? await notion.getCandidate(plan.candidate.pageId) : plan.candidate;
+        if (!fresh || fresh.archived) throw Error('candidate_changed');
+        const again = await prepareCheckins({ ...options, candidate: fresh, poster: null, bannerKnown: false,
+          emailReady: plan.emailReady, skipRegistration: true });
+        if (typeof again === 'string' || binding(again) !== binding(plan)) throw Error('candidate_changed');
+        if (typeof notion?.readControl === 'function' && (await notion.readControl())?.mode !== 'Live') throw Error('not_live');
+        if (lease.expiresAt - clock() < 30_000 || (await kv.get(planningLeaseKey))?.token !== lease.token) throw Error('planning_lease_expired');
+      };
+      const made = await bookPlannedCheckins({ db, calendar, plan, workEmail: plan.workEmail, trialStart: plan.trialStart, clock, validate });
+      outcomes.set(plan.candidate.pageId, made.reason);
+      if (made.reason === 'created') {
+        options.onCreated?.(plan.candidate.pageId);
+        await notion?.appendCandidateNote?.({ pageId: plan.candidate.pageId, text: `${plan.today} · Daily 15-minute morning and night check-ins created for ${md(plan.start)} – ${md(plan.end)} from a shared trial schedule, with each occurrence checked against the team calendars (by Uncle Sam).` }).catch(() => {});
+        if (poster) await poster(`📅 ${plan.name}'s check-ins are on the calendar, ${md(plan.start)} – ${md(plan.end)}: ${[made.morning && `mornings ${ptTime(made.morning)} PT`, made.night && `nights ${ptTime(made.night)} PT`].filter(Boolean).join(', ')}${made.varying ? ' for the first occurrences; later times vary, as shown in the invitations' : ''}${plan.workEmail ? `, sent to ${plan.workEmail}` : "; I'll add their Company email once I have it"}.`).catch(() => {});
+      } else if (made.reason === 'checkin_creation_needs_review') {
+        if (poster && await kv.claim(`checkins:creation-held:${plan.candidate.pageId}`, { at: now }, now))
+          await poster(`📅 ${plan.name}'s check-in setup needs review after an incomplete calendar write. I kept the receipts and reserved times and will not repeat the invitations automatically.`).catch(() => {});
+        break; // A provider failure may affect the rest of this batch too.
+      }
+    }
+    return outcomes.get(candidate.pageId) ?? 'joint_plan_deferred';
+  } catch { return 'checkins_failed:joint_planning'; }
+  finally { await kv.compareAndSwap(planningLeaseKey, lease, { token: lease.token, expiresAt: 0 }, clock()); }
 }
 
 /** One all-day banner on Project's calendar for confirmed dates; moved if the dates change; never a second one. -> a reason. */
@@ -206,6 +264,7 @@ export async function runWorkTrials({ env, db, notion, claude, calendar, canWrit
     summary.state = 'ran';
     const today = laDate(now);
     let team;
+    const checkinQueue = [];
     for (const candidate of await notion.listTrialCandidates()) {
       summary.candidates++;
       const f = candidate.fields ?? {}, note = reason => summary.results.push({ candidate: candidate.pageId, reason });
@@ -243,8 +302,8 @@ export async function runWorkTrials({ env, db, notion, claude, calendar, canWrit
         } catch (error) { note(`banner_failed:${error?.code ?? 'failed'}`); }
       }
       // Check-ins as soon as the email exists and the banner is up, whatever the paperwork (Project, 2026-10-18).
-      const early = await ensureCheckins({ db, calendar, canWrite, candidate, poster, notion, clock, bannerKnown: bannerUp });
-      if (early === 'created') summary.checkins = (summary.checkins ?? 0) + 1;
+      const checkinRequest = { db, calendar, canWrite, candidate, poster, notion, clock, bannerKnown: bannerUp, onCreated: () => { summary.checkins = (summary.checkins ?? 0) + 1; } };
+      checkinQueue.push(checkinRequest);
       if (f.Paperwork !== 'Signed') {
         // The trial has started without signed paperwork (Project, 2026-10-17, on Arlen: "why has he not been moved to the work
         // trial in the notion"): the record shows the trial as it is, and Project hears once that the documents are unsigned.
@@ -291,11 +350,11 @@ export async function runWorkTrials({ env, db, notion, claude, calendar, canWrit
           occurredAt: new Date(now).toISOString(), resultEvidence: `${today}: ${what}. Accounts: “${accounts.quote}”.`.slice(0, 1900) }).catch(() => null);
       }
       // Accounts confirmed (from the notes too): the check-ins, once the banner is up.
-      if (datesConfirmed && early !== 'created' && early !== 'already_set_up') {
-        const r = await ensureCheckins({ db, calendar, canWrite, candidate, poster, notion, clock, emailReady: true, bannerKnown: bannerUp });
-        if (r === 'created') summary.checkins = (summary.checkins ?? 0) + 1;
-        else if (r.startsWith('checkins_failed')) note(r);
-      }
+      if (datesConfirmed) checkinRequest.emailReady = true;
+    }
+    for (const request of checkinQueue) {
+      const reason = await ensureCheckins(request);
+      if (reason.startsWith('checkins_failed')) summary.results.push({ candidate: request.candidate.pageId, reason });
     }
     return summary;
   } catch (error) { return { ...summary, error: typeof error?.code === 'string' ? error.code : 'work_trials_failed' }; }

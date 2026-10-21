@@ -25,7 +25,9 @@ function world(candidate, { banners = [] } = {}) {
   const template = { id: 'tmpl1', allDay: true, status: 'confirmed', summary: 'Elliot Woods Work Trial (Remote)', updated: '2026-10-15T01:43:17Z', start: '2026-10-11T00:00:00Z', end: '2026-10-19T00:00:00Z',
     attendees: ['taylor', 'robin', 'quinn', 'project', 'parker', 'alexis'].map(n => ({ email: `${n}@company.example` })).concat([{ email: 'elliotw1221@example.test' }]) };
   const calendar = { listEvents: async ({ q }) => (q === 'Work Trial' ? [template, ...banners] : banners),
-    writeEvent: async w => { events.push(w); return { id: 'newbanner', htmlLink: 'https://calendar.google.com/x' }; } };
+    writeEvent: async w => { events.push(w); const id = w.body.id ?? 'newbanner';
+      if (w.body.start?.date && !w.eventId) banners.push({ id, allDay: true, status: 'confirmed', summary: w.body.summary, start: `${w.body.start.date}T00:00:00Z`, end: `${w.body.end.date}T00:00:00Z`, attendees: w.body.attendees });
+      return { id, htmlLink: 'https://calendar.google.com/x' }; } };
   return { notion, calendar, writes, events, posted, notes, poster: async t => posted.push(t) };
 }
 

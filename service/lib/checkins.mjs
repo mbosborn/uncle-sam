@@ -156,7 +156,7 @@ export async function runCheckinGuard({ env = {}, db, calendar, poster, notion =
         summary.redated = (summary.redated ?? 0) + 1;
         continue;
       }
-      if (!(c && (c.archived || CLOSED_OUTCOMES.includes(f.Outcome) || f.Stage === 'Closed'))) { open.push({ ...reg, firstLock, email: c?.email ?? null }); continue; }
+      if (!(c && (c.archived || CLOSED_OUTCOMES.includes(f.Outcome) || f.Stage === 'Closed'))) { if (!reg.creating) open.push({ ...reg, firstLock, email: c?.email ?? null }); continue; }
       for (const e of mine.filter(e => e.status !== 'cancelled' && isOf(e, ofReg(reg)) && Date.parse(e.start) > now)) {
         try { await calendar.writeEvent({ calendarId: 'primary', eventId: e.id, sendUpdates: 'none', body: { status: 'cancelled' } }); e.status = 'cancelled'; summary.cancelled++; } catch { /* next run */ }
       }
@@ -286,12 +286,13 @@ export async function runCheckinGuard({ env = {}, db, calendar, poster, notion =
           const early = t => t >= slot.comfort[0] && t <= slot.comfort[1] && beforeEod(t, busy, MUST, length);
           // Within 12 hours of a check-in only a real clash moves it: no last-minute reshuffles for a slightly better time.
           const settled = start - now < 12 * 3600_000;
-          const better = !settled && to !== null && to !== start && ((early(to) && !early(start)) || (early(to) === early(start) && Math.abs(start - slot.target) - Math.abs(to - slot.target) > 30 * 60_000));
+          const better = !reg.jointPlan && !settled && to !== null && to !== start && ((early(to) && !early(start)) || (early(to) === early(start) && Math.abs(start - slot.target) - Math.abs(to - slot.target) > 30 * 60_000));
           if (!hit && !outside && !better) continue;
-          if (isFirstCheckin(inst, reg.firstLock)) {
-            summary.firstHeld = (summary.firstHeld ?? 0) + 1;
+          if (isFirstCheckin(inst, reg.firstLock) || reg.jointPlan) {
+            const heldCounter = isFirstCheckin(inst, reg.firstLock) ? 'firstHeld' : 'plannedHeld';
+            summary[heldCounter] = (summary[heldCounter] ?? 0) + 1;
             if ((hit || outside) && poster && await kv.claim(`checkin:first:conflict-held:${reg.pageId}:${inst.id}:${start}`, { at: now }, now)) {
-              const ts = await poster(`📅 ${reg.first}'s first check-in at ${ptTime(start)} PT has a scheduling conflict. Its time is locked against automatic moves. Keep it, or reply with an explicit replacement time in PT; I'll recheck it and send an updated confirmation.`).catch(() => null);
+              const ts = await poster(`📅 ${reg.first}'s ${isFirstCheckin(inst, reg.firstLock) ? 'first check-in' : series.kind + ' check-in'} at ${ptTime(start)} PT has a scheduling conflict. Its time is locked against automatic moves. Keep it, or reply with an explicit replacement time in PT; I'll recheck availability before updating the invitation.`).catch(() => null);
               if (ts) {
                 const ask = { key: reg.key, instId: inst.id, start, end, email: hit?.[0] ?? null, eventId: hit?.[1]?.id ?? null, at: now, ts };
                 await kv.put(`checkins:askts:${ts}`, ask, now);
@@ -475,6 +476,10 @@ export async function handleCheckinReply({ event, db, calendar, notion, gmail, p
     const threadAsk = await kv.get(`checkins:askts:${ask.ts ?? event.threadTs}`);
     if (threadAsk) await kv.put(`checkins:askts:${ask.ts ?? event.threadTs}`, { ...threadAsk, answered: now }, now);
   };
+  const recordPlannedMove = async to => {
+    const reg = ask.key && await kv.get(ask.key);
+    if (reg?.jointPlan) await kv.compareAndSwap(ask.key, reg, { ...reg, slots: reg.slots.map(s => s.at === ask.start ? { ...s, at: to, late: isLate(to) } : s) }, now);
+  };
   const t = TIME.exec(text);
   if (t && (t[2] || t[3]) && calendar?.writeEvent) {
     const firstLock = ask.key ? await kv.get(firstLockKey(ask.key.replace(/^checkins:/, ''))) : null;
@@ -492,6 +497,7 @@ export async function handleCheckinReply({ event, db, calendar, notion, gmail, p
         const { reviseFirstCheckin } = await import('./first-checkin-confirmation.mjs');
         const changed = await reviseFirstCheckin({ db, calendar, notion, gmail, pageId: firstLock.pageId,
           eventId: ask.instId, to, quote: text, clock });
+        if (changed.changed) await recordPlannedMove(to);
         await done();
         if (changed.changed) sideEffects.push('checkin_moved');
         await reply(changed.changed ? 'Updated the invitation. The revised first-check-in email is queued for verification and delivery.' : 'That is already the confirmed time.');
@@ -503,6 +509,7 @@ export async function handleCheckinReply({ event, db, calendar, notion, gmail, p
     }
     await calendar.writeEvent({ calendarId: 'primary', eventId: ask.instId, body: { start: { dateTime: new Date(to).toISOString(), timeZone: 'America/Los_Angeles' },
       end: { dateTime: new Date(to + length).toISOString(), timeZone: 'America/Los_Angeles' } } });
+    await recordPlannedMove(to);
     await kv.put(`checkins:move:${ask.instId}:${to}`, { at: now, from: ask.start, by: 'Project' }, now);
     await done();
     sideEffects.push('checkin_moved');

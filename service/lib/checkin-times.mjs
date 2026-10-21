@@ -75,13 +75,20 @@ export const beforeEod = (t, busy, must, length = SLOT_MS) => t + length + GAP_M
  * [bandFrom, bandTo], then within 12 hours of the target. constraints: [{ from?, to? }] Pacific HH:MM bounds people asked for.
  * -> ms or null.
  */
-export function nearestAllowed({ target, band, busy, must, optional = [], constraints = [], length = SLOT_MS, now = 0, comfort = null }) {
+function findAllowed({ target, band, busy, must, optional = [], constraints = [], length = SLOT_MS, now = 0, comfort = null }, collect = false) {
   let extreme = false, preEod = false;
+  const choices = [], seen = new Set(), bounds = new Map(), eods = new Map();
+  const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' });
   const allowed = (t, who) => {
     if (t <= now) return false;
-    const [e, l] = teamBoundsOn(t, busy, must, { extreme });
+    const day = dayFormat.format(t), key = `${day}:${extreme}`;
+    if (!bounds.has(key)) bounds.set(key, teamBoundsOn(t, busy, must, { extreme }));
+    const [e, l] = bounds.get(key);
     if (t < e || t > l) return false;
-    if (preEod && !beforeEod(t, busy, must, length)) return false;
+    if (preEod) {
+      if (!eods.has(day)) eods.set(day, eodStartOn(t, busy, must));
+      if (t + length + GAP_MS > eods.get(day)) return false;
+    }
     for (const c of constraints) {
       const day = laDate(t), f = hm(c.from), to = hm(c.to);
       if (f && t < laWall(day, f[0], f[1])) return false;
@@ -93,7 +100,10 @@ export function nearestAllowed({ target, band, busy, must, optional = [], constr
     const times = [];
     for (let t = Math.ceil(from / STEP_MS) * STEP_MS; t <= to; t += STEP_MS) times.push(t);
     times.sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b);
-    for (const who of [[...must, ...optional], must]) for (const t of times) if (allowed(t, who)) return t;
+    for (const who of [[...must, ...optional], must]) for (const t of times) if (allowed(t, who)) {
+      if (!collect) return t;
+      if (!seen.has(t)) { choices.push(t); seen.add(t); }
+    }
     return null;
   };
   // Before the EOD sync, when that still falls in the trialer's own working hours (an American evening, never an Indian dawn).
@@ -107,8 +117,12 @@ export function nearestAllowed({ target, band, busy, must, optional = [], constr
   if (usual !== null) return usual;
   // Nothing by 9:30 PM PT: up to 9:45 PM, only now.
   extreme = true;
-  return search(band[0], band[1]) ?? search(target - 12 * 3600_000, target + 12 * 3600_000);
+  const last = search(band[0], band[1]) ?? search(target - 12 * 3600_000, target + 12 * 3600_000);
+  return collect ? choices : last;
 }
+export const nearestAllowed = options => findAllowed(options);
+/** All legal starts, in the same preference order as nearestAllowed, for bounded joint planning. */
+export const allowedStarts = options => findAllowed(options, true);
 /** True when `ms` starts after the usual 9:30 PM PT limit (the 9:45 PM exception). */
 export const isLate = ms => { const [lh, lm] = hm(TEAM.latestStart); return ms > laWall(laDate(ms), lh, lm); };
 
