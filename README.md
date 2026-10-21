@@ -8,7 +8,7 @@
 
 Uncle Sam turns role requirements and reviewer feedback into targeted sourcing strategies, using Wrangle to search for and enrich candidates. It ranks profiles against evidence of the work and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
 
-Its core design combines model-based interpretation with explicit workflow rules and durable state. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again.
+The model helps interpret context; explicit workflow rules and durable state decide what can run. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again. The details have to line up, from the agreed trial terms to the email and calendar invite.
 
 [Workflow](#workflow) · [Sourcing](#feedback-driven-sourcing) · [Outreach](#conversation-aware-outreach) · [Architecture](#architecture) · [Development](#development)
 
@@ -40,7 +40,7 @@ flowchart TD
 
 **Review history becomes structured search context.** The history pass reads profile lists with authorized reviewers' thread replies, reactions, and available Wrangle collection feedback. It preserves picks, explicit passes, people not selected from a reviewed batch, and the reasons given. Unreviewed lists contribute no preference signal; interview outcomes and compensation discussions stay separate from profile-selection feedback.
 
-**Ranking uses evidence about the work.** Role-specific preferences capture relevant projects, teams, technical work, and career paths. Explicit calibration overrides conflicting inferred preferences. For roles configured to require it, a selected profile must include an exact supporting quote from its supplied description. Batch size is a ceiling, so weak evidence can produce fewer results instead of quota padding. These checks establish support in the source text, not independent verification of a profile's claims.
+**Ranking uses evidence about the work.** Role-specific preferences capture relevant projects, teams, technical work, and career paths. Explicit calibration overrides conflicting inferred preferences. For roles configured to require it, a selected profile must include an exact supporting quote from its supplied description. Batch size is a ceiling. If the evidence is weak, Uncle Sam can return fewer people instead of filling the list just to hit a number. These checks establish support in the source text, not independent verification of a profile's claims.
 
 The resulting signals influence both search planning and ranking, including suggestions for adjacent companies and less-covered sources. This is persisted feedback used as model context, rather than model-weight training.
 
