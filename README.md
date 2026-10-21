@@ -109,7 +109,7 @@ flowchart LR
   A --> R["Replay report<br/>Compare the same scenarios across versions"]
 ```
 
-Scenarios include overlapping funnels, changed recipients and terms, cancellations, outages, uncertain delivery, restarts, competing trials and first-meeting revisions. The runner blocks outbound network calls and uses invented data. Version comparison reports improvements and regressions against the same expectations; passing establishes behavior for the scenarios covered.
+Replays cover realistic hiring journeys—including interruptions and changed decisions—to check email accuracy, calendar consistency, and duplicate prevention. The runner blocks outbound network calls and uses invented data. Version comparison reports improvements and regressions against the same expectations; passing establishes behavior for the scenarios covered.
 
 [Run the suite and compare versions](docs/REPLAY.md) · [Scenario definitions](test/replay/scenarios.mjs)
 
