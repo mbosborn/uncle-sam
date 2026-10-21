@@ -6,10 +6,6 @@
     "events": [
       {
         "type": "identity"
-      },
-      {
-        "type": "advance",
-        "minutes": 1
       }
     ]
   },

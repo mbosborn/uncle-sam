@@ -15,10 +15,6 @@
         "type": "race",
         "lane": "schedule",
         "cancel": false
-      },
-      {
-        "type": "advance",
-        "minutes": 1
       }
     ]
   },
