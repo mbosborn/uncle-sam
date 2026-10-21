@@ -8,6 +8,7 @@ import { agentFixture } from './agent-fixture.mjs';
 
 export const START = Date.parse('2026-10-23T05:00:00Z'); // Fri 10:30 AM India; trial starts Saturday.
 export const PERSON = '11111111-2222-4333-8444-555555555555';
+export const TEAM_DOMAIN = 'company.example';
 export const INVITE = `Subject: Your Company AI work trial\n\nHi {{first_name}},\n\nCongratulations, we'd like to move you forward with a work trial. Please confirm your available dates. Our rate is {{daily_rate}} per day.`;
 export const CONFIRM = `Subject: Your Company AI work trial\n\nHi {{first_name}},\n\nConfirming the details of your work trial.\n\nDates: {{trial_dates}}\nPay: {{daily_rate}} per day\n\nI've sent you {{documents}}. Once they're signed, we'll set up your accounts.\n\nThere will be morning and night check-ins.`;
 const clone = x => structuredClone(x);
@@ -21,7 +22,7 @@ export async function loadModules(root) {
     [key, await import(pathToFileURL(path.join(root, 'service/lib', `${name}.mjs`)))])));
 }
 
-export async function createWorld(root, { dates = false, rate = 150, now = START } = {}) {
+export async function createWorld(root, { dates = false, rate = 150, now = START, claude = null } = {}) {
   const m = await loadModules(root), a = agentFixture(m, START), rest = a.world({ candidateOverrides: {
     Pipeline: a.sel('India'), 'Daily Trial Rate': { type: 'number', number: rate },
     ...(dates ? { 'Trial Start': { type: 'date', date: { start: '2026-10-24' } }, 'Trial End': { type: 'date', date: { start: '2026-10-25' } } } : {}),
@@ -38,6 +39,9 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
     const hook = w.hooks.get(name); if (hook) { w.hooks.delete(name); await hook(); }
     if (w.faults.has(name)) throw w.faults.get(name);
   };
+  // Test observers run at the simulated provider boundary. They never replace a
+  // production guard; generated tests retain violations even if a worker catches one.
+  w.observeEffect = () => {};
   w.set = (fields, id = PERSON) => { const props = rest.pages.get(id).properties; for (const [key, value] of Object.entries(fields)) {
     props[key] = key === 'Email' ? { type: 'email', email: value } : key === 'Daily Trial Rate' ? { type: 'number', number: value }
       : /^Trial (Start|End)$/.test(key) ? { type: 'date', date: value ? { start: value } : null } : a.sel(value);
@@ -52,6 +56,7 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
     },
     async writeEvent(input) {
       await w.before('calendar.write');
+      w.observeEffect('calendar', clone(input));
       assert.ok(['primary', 'project@company.example', 'robin@company.example', 'quinn@company.example', 'taylor@company.example'].includes(input.calendarId));
       for (const guest of input.body.attendees ?? []) assert.ok(safeEmail(guest.email), 'non-synthetic calendar guest');
       w.calendarWrites.push({ at: w.now, ...clone(input) });
@@ -102,6 +107,7 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
     },
     async send(mail) {
       await w.before('gmail.send'); assert.ok(safeEmail(mail.to), 'non-synthetic email recipient');
+      w.observeEffect('email', clone(mail));
       assert.ok(!mail.cc && !mail.bcc, 'unexpected copied recipient');
       if (mail.replyTo) assert.equal(w.emails.find(e => e.id === mail.replyTo)?.to, mail.to, 'reply bound to another candidate');
       const sent = { ...clone(mail), at: w.now, id: (0xabc000 + w.emails.length).toString(16), url: 'https://mail.google.com/fixture' };
@@ -125,7 +131,8 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
         if (id === m.accountModule.ACCOUNT_TEMPLATE_ID) return 'Subject: Your Company AI accounts\n\nHi [First name],\nStarts [Start day]. Email: [Company email]\nPassword: [Temporary password]\nSlack: [Slack join link]';
         throw Error(`Unscripted template ${id}`); },
       listCandidateNotes: async () => [], appendCandidateNote: async note => { w.notes.push(clone(note)); return { verified: true }; },
-      listTrialCandidates: async () => Promise.all([...rest.pages.keys()].filter(id => id === PERSON || id === w.secondId).map(id => realNotion.getCandidate(id))),
+      listTrialCandidates: async () => (await Promise.all([...rest.pages.keys()].filter(id => id === PERSON || id === w.secondId).map(id => realNotion.getCandidate(id))))
+        .filter(c => !c.archived && c.fields.Stage === 'Trial' && !['Not Selected', 'Withdrawn or Unavailable', 'Hired'].includes(c.fields.Outcome)),
     };
     w.packets = {
       ready: async () => true, onRecord: email => m.docs.packetOnRecord({ db: w.db, email }),
@@ -135,6 +142,7 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
         who: await m.docs.withFreshDates({ notion: w.notion, who }), rate,
         sender: { envelopesFor: async () => [], sendPacket: async input => {
           await w.before('documents.send'); const envelopeId = `envelope-${w.envelopes.length + 1}`;
+          w.observeEffect('packet', clone(input));
           assert.ok(safeEmail(input.email));
           w.envelopes.push({ at: w.now, envelopeId, email: input.email, name: input.name, terms: clone(input.addendum?.terms ?? null) });
           return { ok: true, envelopeId };
@@ -151,12 +159,24 @@ export async function createWorld(root, { dates = false, rate = 150, now = START
       fetchImpl: rest.fetchImpl, clock: w.clock });
     w.runner = m.agent.createAgentRunner({ env: w.env, store: w.store, notion: w.notion, slackRead, dispatcher, routeMap: a.routeMap,
       ui: m.ui.createSlackUi({ env: w.env, fetchImpl: rest.fetchImpl }), gmail: w.gmail, packets: w.packets, clock: w.clock,
-      claude: { complete: async () => { throw Error('Unscripted model call'); } }, fetchImpl: rest.fetchImpl });
+      claude: claude ?? { complete: async () => { throw Error('Unscripted model call'); } }, fetchImpl: rest.fetchImpl });
   };
   try { await w.open(); } catch (e) { w.client?.close(); await rm(dir, { recursive: true, force: true }); throw e; }
   // A fake connection receipt, never real credentials or OAuth requests.
   await w.db.prepare('INSERT INTO uncle_sam_wispr (name,value,updated_at) VALUES (?,?,?)').bind('docusign:tokens', '{"fixture":true}', now).run();
   w.restart = async () => { w.client.close(); await w.open(); w.restarts++; };
+  // Competing workers use separate connections to the same durable database.
+  // Their external adapters still terminate in this synthetic world.
+  w.peer = () => {
+    const client = createClient({ url: `file:${path.join(dir, 'workflow.db')}`, concurrency: 1 });
+    const db = m.adapter.createLibsqlD1(client);
+    return { close: () => client.close(),
+      invites: () => m.invite.runTrialInvites({ db, notion: w.notion, gmail: w.gmail, parseTemplate: m.review.parseTemplate, poster: w.post, clock: w.clock }),
+      documents: () => m.queue.runEmailQueue({ db, notion: w.notion, packets: w.packets, poster: w.post, clock: w.clock }),
+      schedule: () => m.trials.runWorkTrials({ env: w.env, db, notion: w.notion, calendar: w.calendar, canWrite: true, poster: w.post, clock: w.clock, force: true }),
+      confirm: () => m.first.runFirstCheckinConfirmations({ env: w.env, db, notion: w.notion, calendar: w.calendar, gmail: w.gmail, poster: w.post, clock: w.clock }),
+    };
+  };
   w.close = async () => { w.client.close(); await rm(dir, { recursive: true, force: true }); };
   w.candidate = (id = PERSON) => w.notion.getCandidate(id);
   w.feedback = async ({ author = m.agent.PEOPLE.robin, dates: givenDates = false, id = 'feedback-1' } = {}) => {

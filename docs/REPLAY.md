@@ -64,10 +64,50 @@ The report export rejects non-example email domains and common credential format
 
 Add a scenario in `test/replay/scenarios.mjs` using `world.step` and explicitly state the expected recipient, content, timing, number of sends and calendar changes. Derive those expectations from the intended workflow, not from whichever output the code currently produces. Keep real incidents private and write a minimal invented equivalent.
 
-Run it against the previous revision as well as the change. A useful regression fails on the old behavior and passes on the correction. Keep workflow replay separate from future evaluations of fresh model answers; a deterministic pass does not establish model quality or live provider readiness.
+Run it against the previous revision as well as the change. A useful regression fails on the old behavior and passes on the correction. Keep workflow replay separate from the fresh model evaluations below; a deterministic pass does not establish model quality or live provider readiness.
+
+## Generated sequences and controlled races
+
+```sh
+npm run test:explore
+npm run test:explore -- --runs 500 --events 30 --seed 20261020
+npm run test:explore -- --seed 20261020 --path '<path from a failure report>'
+npm run test:explore -- --replay .local/replay-generated/failures/<id>.json
+# After fixing and reviewing a synthetic failure, keep it in the ordinary tests:
+npm run test:explore -- --replay .local/replay-generated/failures/<id>.json --retain
+```
+
+[fast-check](https://fast-check.dev/docs/advanced/model-based-testing/) generates sequences across interview, deep-dive, recap and overlapping entry paths. Events include date changes, repeated approval delivery, cancellation, hold, withdrawal, identity changes, service-read outages, recovery, elapsed time and process restarts. Every sequence finishes with recovery and repeated worker runs so an outage cannot hide an unsafe retry.
+
+The independent oracle checks effects at the simulated provider boundary. It checks recipient identity, current packet dates, candidate versus internal calendar guests, duplicate delivery and whether accepted cancellation or a hold should prevent an action. Two workers use separate connections to the same local database. A [controlled scheduler](https://fast-check.dev/docs/advanced/race-conditions/) varies when operations reach the simulated providers, including a competing cancellation. This explores those boundaries; it is not an exhaustive model of network, operating-system or provider behavior.
+
+Failures exit nonzero and are automatically saved under `.local/replay-generated/failures/`. fast-check shrinks inputs, then deletion reduction removes events that do not contribute to the same failure. Reports preserve the seed, shrink path, reduced sequence and executed scheduling order. The reduction seeks a sequence with no removable single event under that scheduling seed, not a proof of the globally shortest counterexample. `--retain` verifies the corrected behavior and adds the synthetic sequence to `test/replay/generated-regressions/`, which `npm test` always runs. Do not weaken an invariant merely to make a failure pass.
+
+The default exploration is 100 sequences of up to 20 generated events, with a three-minute exploration budget and a separate outer timeout. A timeout is a failed run. Use a fixed seed for repeatable CI and additional seeds for broader local coverage. Reports stay local; no candidate records are recorded or imported.
+
+## Fresh model decision checks
+
+```sh
+npm run test:model -- --list
+# Set the chosen provider's key securely in your shell. No live-service keys are needed.
+npm run test:model -- --route openrouter --repeat 3
+npm run test:model -- --scenario terms-withdrawn-agreement --repeat 5
+```
+
+This opt-in suite calls the real model through the production client and prompts. It covers free-text interviewer approvals, corrections, quoted instructions, unauthorized actors, recap decisions, bilateral date agreement, withdrawal, pay disputes and owner date instructions. Assertions inspect both the model's proposed decision and the resulting workflow effects. A wrong interpretation fails even if a later guard happens to block delivery. Positive cases must reach the expected queue, packet or calendar; doing nothing is not automatically safe behavior.
+
+The network-capable parent holds only the selected model credential. The workflow runs in a separate process with a clean environment, the replay I/O blocker and a temporary database. Model requests cross a narrow IPC broker; returned tool calls execute only against synthetic adapters. No real Gmail, Calendar, Notion, document or account operation is available. The configured model provider receives the synthetic conversations and production prompts. There is no import path for real candidate or take-home content.
+
+Default limits are three repetitions, 120 model requests, 65,536 output tokens and 25 minutes. Each request is capped at 256 KiB and 8,192 output tokens. `--max-calls` and `--max-output-tokens` adjust the bounds. Input and output tokens both incur provider charges; these are not dollar limits. API errors, missing decisions, truncated output, missing usage and exhausted budgets fail the run. The suite has no automatic retries and is not part of paid PR checks.
+
+`--route`, `--model`, and provider environment variables select the model. An optional explicit `--config` reads only the model keys and names from a local `secrets` object; it never passes the secrets file to a workflow worker. `--report` selects a local output path. Reports retain actual model/provider identifiers, usage, request hashes, decisions, assertions and source/suite hashes. They omit API keys, raw prompts, hidden reasoning and generated account credentials. Changing source during a run invalidates it. Reports are not uploaded by CI.
+
+The assertion approach follows [Promptfoo's expected-output patterns](https://www.promptfoo.dev/docs/configuration/expected-outputs/); no Promptfoo or Temporal runtime is required. Repeated passes describe these scenarios on that model at that time. They do not prove all possible language interpretations or live integration readiness.
 
 ## Compatibility of the included safety fixes
 
 Queued invitations and packets are bound to the candidate identity that authorized them. A changed recipient or invitation rate requires reconciliation instead of silently redirecting old work. Cancellation uses the exact queue revision. Uncertain delivery stays held even when another funnel supplies a fresh instruction.
 
 Pending account setups now retain their approved recipient. Older pending setups without that field are held for review. If identity or authorization changes after an account is created, credentials are withheld; verify the recipient and reset the password before delivery. The replay command never migrates a live database, activates automation or deploys these changes.
+
+First-check-in confirmation queues also retain the personal recipient and work account. Changed recipients, changed work accounts and older queue entries without recipient evidence remain held for explicit reconciliation. Trial calendar setup honors candidate holds before creating banners or check-ins. These are runtime protections; test execution itself never changes live queue entries.

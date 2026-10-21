@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "plan": {
+    "funnel": "interview",
+    "phase": "calendar",
+    "events": [
+      {
+        "type": "identity"
+      },
+      {
+        "type": "advance",
+        "minutes": 1
+      }
+    ]
+  },
+  "ordering": []
+}
