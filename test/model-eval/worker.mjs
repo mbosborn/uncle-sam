@@ -41,7 +41,8 @@ for (let repetition = 1; repetition <= Number(repeatText); repetition++) for (co
     w = await createWorld(root, { ...s.options, claude });
     await s.run(w, { root, claude, tools: name => row.decisions.filter(x => x.name === name).map(x => x.input) });
     if (row.modelErrors.length) throw Error(row.modelErrors[0]);
-    if (!s.options.allowNoModel && (!row.modelCalls || !row.decisions.length)) throw Error('eval_missing_model_decision');
+    const terminal = { feedback: 'propose', recap: 'report_recap', terms: 'terms', dates: 'dates' }[s.family];
+    if (!s.options.allowNoModel && (!row.modelCalls || !row.decisions.some(x => x.name === terminal))) throw Error('eval_missing_model_decision');
     row.passed = true;
   } catch (error) { row.error = String(error.message).slice(0, 2000); }
   finally {
