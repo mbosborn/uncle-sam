@@ -10,7 +10,7 @@ Uncle Sam turns role requirements and reviewer feedback into targeted sourcing s
 
 The model helps interpret context; explicit workflow rules and durable state decide what can run. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again. The details have to line up, from the agreed trial terms to the email and calendar invite.
 
-[Workflow](#workflow) · [Sourcing](#feedback-driven-sourcing) · [Outreach](#conversation-aware-outreach) · [Learning](#learning-from-results) · [Architecture](#architecture) · [Development](#development)
+[Workflow](#workflow) · [Sourcing](#feedback-driven-sourcing) · [Outreach](#conversation-aware-outreach) · [Learning](#learning-from-results) · [Architecture](#architecture) · [Testing](#testing) · [Development](#development)
 
 ## Workflow
 
@@ -119,7 +119,9 @@ The diagram summarizes shared patterns; individual workflows apply their own che
 - **Persist execution state.** Semantic action keys, atomic claims, and delivery receipts help prevent duplicate work across repeated events and worker runs. Confirmed failures and uncertain sends follow different recovery paths; an unclear delivery result is held for reconciliation.
 - **Keep operational states distinct.** An invitation is not attendance, an uploaded take-home is not a pass, and a queued email is not confirmed delivery. Those distinctions control downstream actions.
 
-## Work-trial replay
+## Testing
+
+**More than a thousand automated tests run on every change**, covering each integration, workflow rule and earlier bug with simulated providers. The suites below go further: they run whole hiring journeys in an isolated environment, search for event orders nobody wrote down, ask a real model to interpret messages, and break the safeguards on purpose to prove the tests notice.
 
 **The tests check the decisions and the consequences.** Synthetic candidates enter through interview feedback, deep-dive feedback, recap decisions, fast-tracking and direct document requests. Those paths reach the real trial queues, document confirmation, account setup and calendar workers. Assertions check who receives each email, which terms it contains, when it can send, and whether the calendar matches the promise.
 
@@ -135,11 +137,15 @@ flowchart TD
 
 **Authored replay proves expected behavior across a complete journey.** The same scenarios run against two code revisions to expose regressions. Fewer actions alone do not count as an improvement; the expected recipients, terms, timing and calendar effects still have to match.
 
-**Generated replay searches for combinations we did not think to write.** fast-check varies event sequences and the order in which competing workers reach simulated services. Failures are reduced to a reproducible sequence with a saved seed and scheduling order. Once corrected, that sequence joins the permanent regression tests. This helps protect against stale dates, duplicate delivery and work that resumes after a cancellation or hold.
+**Generated replay searches for combinations we did not think to write.** [fast-check](https://github.com/dubzzz/fast-check) varies event sequences and the order in which competing workers reach simulated services. Failures are reduced to a reproducible sequence with a saved seed and scheduling order. Once corrected, that sequence joins the permanent regression tests. This helps protect against stale dates, duplicate delivery and work that resumes after a cancellation or hold.
 
 **Fresh model evaluations test whether the instruction was understood.** A separate suite asks the configured model to interpret approvals, corrections, cancellations and conflicting messages using the production prompts. It checks the proposed decision as well as the resulting workflow, so a mistaken approval fails even if another guard catches it later. Repeated runs record the actual model, token usage and source version, with limits on requests and output tokens.
 
-**Mutation testing checks whether those tests would notice a broken safeguard.** Stryker deliberately bypasses selected recipient, cancellation, compensation and calendar checks in temporary source copies. The relevant replay assertions must fail. It also forces each check to block valid work, so preventing every send cannot earn a pass. Crashes and timeouts do not count as caught safeguards.
+**Mutation testing checks whether those tests would notice a broken safeguard.** [StrykerJS](https://github.com/stryker-mutator/stryker-js) deliberately bypasses selected recipient, cancellation, compensation and calendar checks in temporary source copies. Thirteen guards are each forced always open and always closed, 26 mutations in all, and every one must be caught by the specific replay scenario expected to catch it. Forcing a check closed proves that preventing every send cannot earn a pass. Crashes and timeouts do not count as caught safeguards, and a surviving mutation fails the run.
+
+**Live checks stay away from real candidates.** A control switch sets the deployment to Off, Test or Live. In Test mode it acts only on a marked fixture record and writes dry-run lines instead of sending anything. Slack answers are checked in a dedicated test channel against the exact wording the spec expects, each graded pass, off or fail, and misses become spec or code changes. New outreach wording and reply handling also get real-model probes on synthetic profiles before release.
+
+**Every release is checked after it ships.** The deployed runtime files are compared with the tested source, and a health endpoint reports each feature's version marker, database reachability and the learning worker's status. Existing schedules and automatic activity are confirmed unchanged. No candidate is used as a send test, and no scheduled job is triggered by hand to prove a release works.
 
 Workflow effects remain isolated across these suites. Only the opt-in model broker can reach the configured model API; it receives synthetic conversations. Candidate services stay disconnected, reports stay local, and CI runs the offline checks without model credentials. Passing establishes behavior for the cases and schedules tested, not every possible event or instruction.
 
