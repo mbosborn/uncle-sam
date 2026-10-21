@@ -277,7 +277,7 @@ export async function runOnboarding({ env, db, notion, claude = null, routeMap =
         if (!pick.address) return toJamie(pick.unknown ? 'address_lookup_failed' : 'no_free_address');
         if (!(await reserveAddress({ db, address: pick.address, pageId: candidate.pageId, name: candidate.fullName, clock }))) return toJamie('address_reserved');
         const address = pick.address;
-        state.account = { proposedAt: now, address, skipped: pick.skipped, name: candidate.fullName };
+        state.account = { proposedAt: now, address, skipped: pick.skipped, name: candidate.fullName, email: candidate.email };
         await save();
         if (masonChannel) {
           const ts = await masonPoster({ env, fetchImpl, channelId: masonChannel })(candidate.fields?.Paperwork === 'Signed' ? `🪖 Setting up ${name}'s Company email, Slack${insightful ? ', Okta and Insightful' : ' and Okta'} in 30 minutes.`
@@ -293,6 +293,12 @@ export async function runOnboarding({ env, db, notion, claude = null, routeMap =
       if (a.halted || a.createClaimed) return 'halt';
       if (now - a.proposedAt < ACCOUNT_HOLD_MS) return 'wait';
       // Held or the documents not out by now: dropped; proposed afresh (a new heads-up, 30 more minutes) once that changes.
+      if (!a.email || a.email.toLowerCase() !== String(candidate.email ?? '').toLowerCase()
+        || a.name !== candidate.fullName) {
+        state.account = { ...a, halted: 'candidate_identity_changed' }; await save();
+        await tellMason(`📋 I held ${name}'s account setup because their identity changed or the pending setup has no verified recipient. Review the candidate before restarting setup.`);
+        return 'halt';
+      }
       const late = await accountGate(candidate);
       if (late) { state.account = { dropped: late, droppedAt: now, droppedAddress: a.address }; await save(); return 'wait'; }
       state.account = { ...a, createClaimed: now };
@@ -321,6 +327,16 @@ export async function runOnboarding({ env, db, notion, claude = null, routeMap =
       const email = fillAccountEmail(full, { firstName: givenName, startDay: dayLabel(start), address: a.address, password, joinUrl: accounts.joinUrl });
       if (!email || !accounts.gmail) {
         await tellMason(`📋 ${a.address} is created for ${name}, but I couldn't email their sign-in (template or Gmail unavailable). Reset their password in the Google admin console and send it to ${candidate.email} yourself.`);
+        return 'created';
+      }
+      // Creating the account and reading the template can be slow. Never send
+      // credentials using an identity or trial date that changed during that work.
+      const latest = await notion.getCandidate(candidate.pageId).catch(() => null);
+      if (!latest || latest.email !== candidate.email || latest.fullName !== candidate.fullName
+        || dayOnly(latest.fields?.['Trial Start']) !== start || await accountGate(latest)
+        || (await notion.readControl())?.mode !== 'Live') {
+        state.account.emailError = 'candidate_changed_before_credentials'; await save();
+        await tellMason(`📋 ${a.address} was created, but I held the sign-in email because the candidate details or authorization changed. Verify the recipient and reset the password before delivery.`);
         return 'created';
       }
       state.account.emailClaimed = now; await save();

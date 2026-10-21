@@ -15,7 +15,8 @@
     "setup:slack": "node scripts/slack-bootstrap.mjs",
     "setup:check": "node scripts/setup.mjs check",
     "setup:env": "node scripts/setup.mjs env",
-    "setup:verify": "node scripts/setup.mjs verify"
+    "setup:verify": "node scripts/setup.mjs verify",
+    "test:replay": "node scripts/replay.mjs"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

@@ -33,6 +33,9 @@ export const handInviteQuery = email => `to:${email} "work trial" -subject:payme
 /** The documents email threads only under a real invitation (its template phrase), never under any mail that says "work trial". */
 export const inviteThreadQuery = email => `to:${email} "move you forward with a work trial" newer_than:60d`;
 const firstOf = full => String(full ?? '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/[^\p{L}\s'.-]/gu, ' ').trim().split(/\s+/)[0] || 'them';
+const sameRecipient = (queued, candidate) => !!queued.email && candidate?.emailVerified !== false
+  && queued.email.toLowerCase() === String(candidate?.email ?? '').toLowerCase()
+  && String(queued.name ?? '').trim().toLowerCase() === String(candidate?.fullName ?? '').trim().toLowerCase();
 const dayOnly = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
 const parts = (ms, tz) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', weekday: 'short' })
   .formatToParts(ms).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
@@ -65,6 +68,7 @@ export function fillInvite(template, { firstName, rate }) {
 export async function queueTrialInvite({ db, candidate, rate, calledBy = null, clock = Date.now, force = false }) {
   const kv = noticeStore(db), now = clock();
   const was = await kv.get(`trialinvite:${candidate.pageId}`);
+  if (was?.deliveryUncertain || was?.dispatchingAt) return { reason: 'held', at: was.at, tz: was.tz };
   if (was && !was.dropped) return { reason: was.sentAt ? 'already_sent' : 'already_queued', at: was.at ?? null, tz: was.tz ?? null };
   if (was?.dropped && !force) return { reason: 'dropped', dropped: was.dropped };
   const { tz } = await trialTimeZone({ candidate, kv }).catch(() => ({ tz: null }));
@@ -83,10 +87,10 @@ export async function runTrialInvites({ db, notion, gmail, parseTemplate, poster
     const kv = noticeStore(db), now = clock();
     for (const key of await kv.names('trialinvite:')) {
       const q = await kv.get(key);
-      if (!q?.pageId || q.sentAt || q.dropped || now < q.at) continue;
-      const retry = async code => {
+      if (!q?.pageId || q.sentAt || q.dropped || q.deliveryUncertain || q.dispatchingAt || now < q.at) continue;
+      const retry = async (code, expected = q) => {
         const attempts = (q.retryAttempts ?? 0) + 1;
-        await kv.compareAndSwap(key, q, { ...q, retryAttempts: attempts, lastError: code,
+        await kv.compareAndSwap(key, expected, { ...q, retryAttempts: attempts, lastError: code,
           at: now + Math.min(3600_000, 300_000 * 2 ** Math.min(attempts - 1, 4)) }, now);
         summary.error = code;
         log(`uncle_sam_trial_invites retry error=${code}`);
@@ -97,24 +101,26 @@ export async function runTrialInvites({ db, notion, gmail, parseTemplate, poster
       const f = c?.fields ?? {};
       const why = !c || c.archived ? 'gone' : CLOSED.includes(f.Outcome) || ['Closed', 'Hired'].includes(f.Stage) ? 'closed' : f.Outcome === 'On Hold' ? 'on_hold'
         : (await kv.get(`trialterms:hold:${q.pageId}`)) ? 'pay_concern' : ['Sent', 'Signed'].includes(f.Paperwork) ? 'already_out'
-        : dayOnly(f['Trial Start']) && dayOnly(f['Trial End']) ? 'dates_on_record' : !c.email ? 'no_email' : null;
+        : dayOnly(f['Trial Start']) && dayOnly(f['Trial End']) ? 'dates_on_record' : !c.email ? 'no_email'
+        : !sameRecipient(q, c) ? 'identity_changed'
+        : c.payment?.dailyRate != null && c.payment.dailyRate !== q.rate ? 'rate_changed' : null;
       if (why) {
-        await kv.put(key, { ...q, dropped: why, at: now }, now);
+        await kv.compareAndSwap(key, q, { ...q, dropped: why, at: now }, now);
         summary.dropped++;
         // As the documents queue (email-queue.mjs): Project hears why, except when it's gone, already out, or the packet takes over.
-        const said = { closed: 'they are closed on the tracker', on_hold: 'they are On Hold', pay_concern: "they pushed back on the pay and haven't had an answer", no_email: 'there is no email on their record' }[why];
+        const said = { closed: 'they are closed on the tracker', on_hold: 'they are On Hold', pay_concern: "they pushed back on the pay and haven't had an answer", no_email: 'there is no email on their record', identity_changed: 'their identity changed since the invitation was approved', rate_changed: 'their pay changed since the invitation was approved' }[why];
         if (poster && said) await poster(`📋 I didn't send ${firstOf(q.name)}'s work trial invite: ${said}.`).catch(() => {});
         continue;
       }
       // Their time zone, read again now (it may have been found since it was queued): only at a good hour there.
       const found = (await trialTimeZone({ candidate: c, kv }).catch(() => ({ tz: null }))).tz ?? q.tz;
       const goodAt = nextGoodTime(now, found);
-      if (goodAt > now) { await kv.put(key, { ...q, tz: found, at: goodAt }, now); continue; }
+      if (goodAt > now) { await kv.compareAndSwap(key, q, { ...q, tz: found, at: goodAt }, now); continue; }
       let template = null;
       try { template = parseTemplate(await notion.getEmailTemplate(INVITE_TEMPLATE_ID)); } catch (error) { await retry(error?.code ?? 'template_read_unavailable'); continue; }
       const first = String(c.fullName).replace(/\s*\([^)]*\)\s*/g, ' ').trim().split(/\s+/)[0];
       const email = fillInvite(template, { firstName: first, rate: q.rate });
-      if (!email) { await kv.put(key, { ...q, dropped: 'template' }, now); if (poster) await poster(`📋 I didn't send ${first} the work trial invite: the "Email · Work Trial · Invitation" template in Notion changed shape.`).catch(() => {}); continue; }
+      if (!email) { await kv.compareAndSwap(key, q, { ...q, dropped: 'template' }, now); if (poster) await poster(`📋 I didn't send ${first} the work trial invite: the "Email · Work Trial · Invitation" template in Notion changed shape.`).catch(() => {}); continue; }
       // Project already invited them himself (Project, 2026-10-20: never twice, by hand included). No search permission: it goes as before;
       // any other search failure: nothing goes and he hears it (as the take-home invite).
       if (typeof gmail.searchSent === 'function') {
@@ -128,12 +134,29 @@ export async function runTrialInvites({ db, notion, gmail, parseTemplate, poster
         }
         if (earlier?.length) {
           const mine = earlier[0];
-          await kv.put(key, { ...q, dropped: 'sent_by_hand', at: now, handSent: { messageId: mine.id ?? null, threadId: mine.threadId ?? null, subject: mine.subject ?? null, url: mine.url ?? null } }, now);
+          await kv.compareAndSwap(key, q, { ...q, dropped: 'sent_by_hand', at: now, handSent: { messageId: mine.id ?? null, threadId: mine.threadId ?? null, subject: mine.subject ?? null, url: mine.url ?? null } }, now);
           summary.dropped++;
           if (poster) await poster(`📋 You already emailed ${first} about the work trial${mine.url ? ` (<${mine.url}|email>)` : ''}, so I didn't send the invite.`).catch(() => {});
           continue;
         }
       }
+      // Mailbox/template checks may take time. Revalidate the candidate and reserve
+      // the exact queue revision so a cancellation or correction wins over this worker.
+      const fresh = await readCandidate(notion, q.pageId);
+      if (fresh.transient) { await retry('candidate_read_unavailable'); continue; }
+      const latest = fresh.candidate, fields = latest?.fields ?? {};
+      if (!latest || latest.archived || !sameRecipient(q, latest)
+        || CLOSED.includes(fields.Outcome) || ['Closed', 'Hired'].includes(fields.Stage) || fields.Outcome === 'On Hold'
+        || ['Sent', 'Signed'].includes(fields.Paperwork) || (dayOnly(fields['Trial Start']) && dayOnly(fields['Trial End']))
+        || (latest.payment?.dailyRate != null && latest.payment.dailyRate !== q.rate)
+        || await kv.get(`trialterms:hold:${q.pageId}`)) {
+        await kv.compareAndSwap(key, q, { ...q, dropped: 'candidate_changed_before_send', at: now }, now);
+        summary.dropped++; continue;
+      }
+      const latestZone = (await trialTimeZone({ candidate: latest, kv })).tz ?? q.tz;
+      if (nextGoodTime(clock(), latestZone) > clock()) continue;
+      const sending = { ...q, dispatchingAt: now };
+      if (!(await kv.compareAndSwap(key, q, sending, now))) continue;
       if (!(await kv.claim(`trialinvite:sent:${q.pageId}`, { at: now }, now))) { await kv.put(key, { ...q, dropped: 'already_sent', at: now }, now); continue; }
       try {
         const sent = await gmail.send({ to: c.email, subject: email.subject, body: email.body });
@@ -144,7 +167,7 @@ export async function runTrialInvites({ db, notion, gmail, parseTemplate, poster
         const definitelyUnsent = error?.uncertain === false || error?.detail?.uncertain === false;
         const retryable = /(?:http_(?:408|429|5\d\d)|timeout|network_error)$/.test(error?.code ?? '');
         if (definitelyUnsent) await kv.del(`trialinvite:sent:${q.pageId}`);
-        if (definitelyUnsent && retryable) { await retry(error.code); continue; }
+        if (definitelyUnsent && retryable) { await retry(error.code, sending); continue; }
         await kv.put(key, { ...q, dropped: `send_failed:${error?.code ?? 'failed'}`, deliveryUncertain: !definitelyUnsent }, now);
         if (poster) await poster(definitelyUnsent
           ? `🚨 ${first}'s work trial invite was refused (${error?.code ?? 'failed'}). Check the connection or message before retrying.`

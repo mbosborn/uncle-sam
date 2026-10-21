@@ -127,10 +127,11 @@ test('a send that certainly failed frees the claim so a later push can send; an 
   assert.equal(await sure.kv.get('trialinvite:sent:p-sana'), null);
   const maybe = await fail(true);
   assert.ok(await maybe.kv.get('trialinvite:sent:p-sana'));
-  // Re-queued by a person's word: the uncertain one is not sent again, and stops waiting.
+  // A fresh instruction cannot overwrite unresolved delivery evidence.
   await queueTrialInvite({ db: maybe.db, candidate: SANA, rate: 100, clock: () => T0, force: true });
   await runTrialInvites({ db: maybe.db, notion: { getCandidate: async () => SANA, getEmailTemplate: async () => TEMPLATE }, gmail: { send: async () => { throw new Error('must not send'); } }, parseTemplate, clock: due });
-  assert.equal((await maybe.kv.get('trialinvite:p-sana')).dropped, 'already_sent');
+  assert.equal((await maybe.kv.get('trialinvite:p-sana')).deliveryUncertain, true);
+  assert.equal((await maybe.kv.get('trialinvite:p-sana')).dropped, 'send_failed:gmail_send_http_500');
 });
 
 test('temporary candidate, template and Sent-mail outages retry without dropping the invitation', async () => {
