@@ -1,119 +1,127 @@
 # Uncle Sam
 
-**Recruiting Coordinator**
+**Recruiting automation that connects sourcing, feedback, outreach, and operations.**
 
 [![Tests](https://github.com/mbosborn/uncle-sam/actions/workflows/tests.yml/badge.svg)](https://github.com/mbosborn/uncle-sam/actions/workflows/tests.yml)
 ![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=black)
 
-Uncle Sam connects candidate sourcing, recruiter feedback, outreach, and recruiting operations. It uses Wrangle and other sourcing providers to find profiles, carries reviewer feedback into subsequent searches, coordinates LinkedIn and email conversations, and follows candidates through interviews, take-homes, and work trials.
+Uncle Sam finds candidates through Wrangle, uses reviewer feedback to refine future searches, and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
 
-The features below describe the implementation in this source snapshot. External integrations require their own configuration, permissions, and live validation.
+Its core design combines model-based interpretation with explicit workflow rules and durable state. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again.
 
-## What it coordinates
+[Workflow](#workflow) · [Sourcing](#feedback-driven-sourcing) · [Outreach](#conversation-aware-outreach) · [Architecture](#architecture) · [Development](#development)
 
-| Workflow | What Uncle Sam handles |
-| --- | --- |
-| Sourcing and calibration | Search through Wrangle, resolve LinkedIn profiles, and rank candidates using role-specific evidence and reviewer feedback |
-| Outreach and replies | Queue selected profiles, coordinate LinkedIn and email, and route interested replies into the recruiting tracker |
-| Interview follow-through | Collect feedback, interpret explicit next steps, and keep tracker records current |
-| Take-home assignments | Prepare invitations, track submissions, and route work for human review |
-| Work trials | Coordinate dates, check-ins, onboarding, and document validation |
-| Delivery reliability | Preserve action receipts, recheck current evidence, and hold uncertain sends |
+## Workflow
 
-## Sourcing and feedback
-
-Wrangle connects through OAuth and MCP for people search, LinkedIn profile resolution, email enrichment, and collections. Search results join a shared candidate pool; profiles already shown, reviewed, or present in the recruiting tracker are filtered before a new shortlist is prepared. Selected and shown profiles can also be saved back to Wrangle.
+Two loops connect the system: reviewer feedback shapes candidate discovery, while verified events and human decisions drive recruiting operations. The stages below represent supported paths; candidates advance according to the applicable workflow and authorization.
 
 ```mermaid
 flowchart TD
-  B["Role brief and explicit calibration"] --> Q["Plan search"]
-  F["Reviewer feedback<br/>Picks, passes, reasons, and sourcing directions"] --> L["Update role-specific preferences<br/>Work signals and adjacent companies"]
-  L --> Q
-  Q --> W["Wrangle search<br/>Optional Clay and Juicebox sources"]
-  W --> P["Candidate pool<br/>Resolve profiles and filter previously seen candidates"]
-  P --> R["Rank against the brief and profile evidence"]
-  B --> R
+  B["Role brief + explicit fit examples"] --> S["Search and resolve profiles<br/>Wrangle · optional Clay / Juicebox"]
+  S --> R["Filter and rank<br/>Profile evidence · role fit · prior coverage"]
+  R --> H["Human profile review in Slack"]
+  H -->|Picks, passes, and reasons| L["Update role-specific search signals"]
+  L --> S
   L --> R
-  R --> S["Shortlist in Slack<br/>Relevant work and a concise reason for each pick"]
-  S --> F
-  F -->|Explicit outreach decision| O["LinkedIn and email outreach"]
-  O -->|Interested reply| T["Recruiting tracker and interview coordination"]
+  H -->|Authorize outreach| O["LinkedIn + email<br/>Connection state · message templates · reply handling"]
+  O -->|Interested reply| I["Recruiting tracker + interview coordination"]
+  I --> D{"Human next-step decision"}
+  D -->|Take-home| T["Assignment → submission → human review"]
+  T --> D
+  D -->|Work trial| W["Dates + documents + access + check-ins"]
+  D -->|Hold or reject| C["Hold or close the workflow"]
+  W --> F["Trial feedback + human outcome decision"]
 ```
 
-- **Feedback with context.** The history pass reads profile lists alongside authorized reviewers' replies and reactions, plus available Wrangle collection feedback. It distinguishes an explicit pass from someone not selected in a reviewed batch, retains reasons, and leaves unreviewed lists out of preference learning. Interview results and compensation discussions are kept separate from profile-selection feedback.
-- **Signals beyond job titles.** Profile details help identify relevant teams, projects, technical work, and career paths. These signals and explicit sourcing directions inform subsequent searches, including adjacent companies and less-covered sources. Preferences are scoped to the role; newer explicit calibration takes precedence over inferred preferences.
-- **Evidence-based shortlists.** Ranking preserves work descriptions and can require an exact supporting quote from a profile. Company reputation alone does not establish fit. The requested batch size is a maximum: the system can return fewer candidates rather than fill a quota. These checks validate the supplied evidence, not the truth of a candidate's claims.
+## Feedback-driven sourcing
 
-See [profile review extraction](service/lib/profile-reviews.mjs), [history reconstruction](service/lib/taste-history.mjs), and [sourcing calibration](docs/CANDIDATE-DISCOVERY-AND-SOURCING.md).
+**Wrangle is part of the search and review loop.** An OAuth-authenticated MCP integration supports people search, LinkedIn profile resolution, email enrichment, and collections. Results join a shared pool, and shown or selected profiles can be saved back to Wrangle. Prior coverage helps avoid repeatedly surfacing the same people and companies.
 
-## LinkedIn and email outreach
+**Review history becomes structured search context.** The history pass reads profile lists with authorized reviewers' thread replies, reactions, and available Wrangle collection feedback. It preserves picks, explicit passes, people not selected from a reviewed batch, and the reasons given. Unreviewed lists contribute no preference signal; interview outcomes and compensation discussions stay separate from profile-selection feedback.
 
-Selected profiles enter a separate outreach queue. LinkedIn delivery uses Unipile and accounts for whether the person is already connected, needs a connection request, or can receive an enabled InMail. Email enrichment can use Wrangle, with Clay as a fallback.
+**Ranking uses evidence about the work.** Role-specific preferences capture relevant projects, teams, technical work, and career paths. Explicit calibration overrides conflicting inferred preferences. For roles configured to require it, a selected profile must include an exact supporting quote from its supplied description. Batch size is a ceiling, so weak evidence can produce fewer results instead of quota padding. These checks establish support in the source text, not independent verification of a profile's claims.
 
-Writing follows the stage of the conversation. LinkedIn connection notes and opening messages use configured templates personalized with the person's name and background. Model-written emails and follow-ups use profile context and a fact sheet, with length, link, and content checks. The model is instructed to answer replies from the fact sheet and hand off questions it cannot support, including compensation and contract questions.
+The resulting signals influence both search planning and ranking, including suggestions for adjacent companies and less-covered sources. This is persisted feedback used as model context, rather than model-weight training.
 
-An interested reply can trigger a booking link and a tracker entry. Declines close the conversation; replies stop the no-response follow-up path. Sending windows, daily limits, duplicate checks, and human takeover controls govern delivery. The implementation is in [outreach.mjs](service/lib/outreach.mjs).
+[Wrangle integration](service/lib/wrangle.mjs) · [Review extraction](service/lib/profile-reviews.mjs) · [History reconstruction](service/lib/taste-history.mjs) · [Calibration and limits](docs/CANDIDATE-DISCOVERY-AND-SOURCING.md)
 
-## Other workflow details
+## Conversation-aware outreach
 
-| Feature | How it works |
+An approved profile enters a persistent outreach queue. Unipile handles LinkedIn delivery according to connection state: an existing connection, a connection request followed by acceptance, or enabled InMail. Wrangle and Clay can supply email enrichment.
+
+Writing and delivery depend on the conversation stage:
+
+- **Opening messages:** fixed LinkedIn templates personalized with the person's name and background, preserving the intended voice.
+- **Emails and follow-ups:** model-written drafts use profile context and a fact sheet, with length, link, and content checks plus template fallbacks.
+- **Replies:** the model uses conversation history and the fact sheet to propose a reply, close, or human handoff. Unsupported questions, including compensation and contracts, are directed to a person.
+- **Progression:** interest can trigger a booking link and tracker entry; declines close the conversation, and replies stop the no-response follow-up path. Sending windows, daily limits, prior-delivery checks, and takeover controls govern execution.
+
+[Outreach implementation](service/lib/outreach.mjs) · [Outreach tests](test/outreach.test.mjs)
+
+## Recruiting operations
+
+| Capability | Technical detail |
 | --- | --- |
-| Contextual candidate lookup | Resolves questions from Slack thread context and supported screenshots, then re-reads the matching record. Ambiguous names produce clarification rather than an assumed match. |
-| Interview-aware follow-ups | Uses available Meet end evidence or calendar timing, then checks for existing feedback, decisions, withdrawals, and holds before prompting an interviewer. |
-| Trial capacity planning | Looks ahead across upcoming trials and team calendars to flag check-in conflicts before a trial starts. Planning itself does not create meetings. |
-| First-check-in confirmation | Verifies the actual invitation, guests, time zones, conflicts, and notice window before promising a time. The first occurrence is protected from routine automatic rescheduling. |
-| Document validation | Checks every packet page, recipient, signing field, and candidate-specific term against expected schemas before sending or resending. Validation receipts preserve what was checked. |
-| Onboarding and offboarding | Optional Okta and Insightful integrations coordinate access and trial setup, including readback of project/task assignments and deactivation during offboarding. |
-| Payout setup | A separate restricted Stripe onboarding path collects payout details after a confirmed first check-in. This path cannot send payments. |
+| Contextual candidate lookup | Reads Slack thread context and supported screenshots, extracts identity clues, then re-fetches the matching record. Namesakes and incomplete evidence require clarification. |
+| Interview follow-through | Uses available Meet participation/end evidence or calendar timing. Existing feedback, decisions, withdrawals, and holds are checked before interviewer prompts. |
+| Take-home coordination | Tracks invitation, submission, and human review separately. Reminder timing accounts for current status and stated completion plans. |
+| Trial capacity forecasting | Projects upcoming check-ins across team calendars and candidate time zones to identify conflicts before trial starts, without creating meetings during planning. |
+| First-check-in protection | Verifies the actual occurrence, guests, conflicts, time zone, and notice window before sending a confirmation. Routine optimization cannot silently move the first meeting. |
+| Document validation | Checks every packet page, recipient, signing field, and candidate-specific term against versioned schemas. Hashes and field fingerprints bind validation receipts to the checked packet. Resends are validated again. |
+| Access lifecycle | Optional Okta and Insightful integrations coordinate onboarding and offboarding, including readback of project/task assignments. |
+| Payout onboarding | A restricted Stripe path collects payout details after a confirmed first check-in. Its client is limited to account and onboarding-link creation; it cannot send payments. |
 
 ## Architecture
 
-Uncle Sam combines event handlers, scheduled checks, and workflow-specific rules. Each workflow connects an incoming signal to the relevant candidate and current records, checks whether an action is allowed and due, and records the result. AI helps interpret messages and propose structured actions; application code validates those proposals and controls execution.
-
-The diagram shows the shared flow across workflows. Individual workflows use the integrations and checks relevant to their task.
+Node.js 22 and Vercel Functions host event handlers and scheduled workers. Turso/libSQL persists workflow state, pending actions, claims, and receipts. Integration modules connect external systems; the Claude client supplies interpretation, ranking, and structured proposals where needed.
 
 ```mermaid
 flowchart TD
-  S["Slack, webhooks, and human decisions"] --> C
-  O["Sourcing shortlists and outreach replies"] --> C
-  T["Scheduled checks and pending work"] --> C
-  C["Resolve candidate and gather current evidence"]
-  N["Notion, email, calendar, and take-home portal"] --> C
-  C --> P["Determine next step<br/>Workflow rules and AI interpretation where needed"]
-  P --> V{"Check authority, status, timing,<br/>holds, and prior delivery"}
-  V -->|Ready| A["Execute through scoped integrations<br/>Tracker updates, messages, scheduling, or documents"]
-  V -->|Not due| W["Keep pending until due"]
-  V -->|Needs clarification| H["Hold for human review"]
-  A --> R["Record result and delivery evidence<br/>Completed, failed, or uncertain"]
-  R --> D[("Turso / libSQL<br/>Workflow state, receipts, and retry controls")]
-  W --> D
-  H --> D
-  D -->|Prior state| V
-  D -->|Pending work| T
+  E["Events and scheduled workers<br/>Slack · provider webhooks · pending jobs"] --> C["Read current context<br/>Candidate · source evidence · stored state"]
+  C --> P["Plan the next action<br/>Workflow rules + model interpretation"]
+  P --> G{"Validate<br/>Authority · identity · timing · holds · prior delivery"}
+  G -->|Ready| X["Reserve and execute<br/>Workflow-specific integration"]
+  G -->|Not due or needs review| H["Persist pending work or hold"]
+  X --> R["Record outcome<br/>Confirmed · failed · uncertain"]
+  R --> DB[("Turso / libSQL<br/>State · claims · delivery receipts")]
+  H --> DB
+  DB --> C
+  DB -->|Due work| E
 ```
 
-- **Runtime and integrations.** JavaScript on Node.js 22 runs in Vercel Functions for webhooks and scheduled work. Wrangle and optional sourcing providers supply profiles; Unipile and Gmail handle outreach. Slack, Notion, Google Calendar, the take-home portal, and optional document and onboarding services support the recruiting workflows.
-- **Candidate and event context.** Actions are tied to the relevant candidate and interview, assignment, or trial. Workflows check current source records before acting. A booked interview, an uploaded submission, a human review, and an approved next step are separate pieces of evidence.
-- **Decision checks.** Model proposals are validated against stored events, candidate records, and authorization rules. Workflow-specific checks enforce holds, pause controls, required details, and recipient matching. Missing or conflicting evidence can leave work pending or require human review.
-- **Scheduling.** Follow-ups use the relevant event time, prior delivery, and current workflow state. Depending on the workflow, business-day rules, sending hours, rescheduling, replies, and a candidate's stated completion date can change when an action becomes due. Scheduled work is rechecked before execution.
-- **State and recovery.** Turso/libSQL stores pending actions, delivery receipts, and retry controls. Action keys and claims help prevent duplicate execution. Confirmed delivery, retryable failures, and uncertain outcomes are tracked separately so an unclear send result is not blindly retried.
+The diagram summarizes shared patterns; individual workflows apply their own checks and integrations.
 
-Human decisions remain part of the workflow. The coordinator uses those decisions and the latest evidence to determine what can happen next; recorded outcomes then inform subsequent checks.
+- **Separate interpretation from execution.** Structured model proposals are checked by application code against source records and authorization rules before workflow actions run.
+- **Revalidate at the action boundary.** Queued work can become stale. Relevant identity, dates, status, holds, and delivery evidence are checked again before execution.
+- **Persist execution state.** Semantic action keys, atomic claims, and delivery receipts help prevent duplicate work across repeated events and worker runs. Confirmed failures and uncertain sends follow different recovery paths; an unclear delivery result is held for reconciliation.
+- **Keep operational states distinct.** An invitation is not attendance, an uploaded take-home is not a pass, and a queued email is not confirmed delivery. Those distinctions control downstream actions.
+
+## Explore the implementation
+
+| Area | Source and verification |
+| --- | --- |
+| Sourcing and calibration | [Ranking](service/lib/sourcing.mjs), [calibration](service/lib/sourcing-calibration.mjs), [tests](test/sourcing-calibration.test.mjs) |
+| Event orchestration | [Vercel handlers](service/lib/vercel-handlers.mjs), [agent runner](service/lib/agent-runner.mjs), [workflow policy](service/lib/workflow-policy.mjs) |
+| Scheduling | [Capacity planner](service/lib/checkin-plan.mjs), [first-check-in design](docs/FIRST-CHECKIN-RELIABILITY.md), [tests](test/first-checkin.test.mjs) |
+| Document delivery | [Validation design](docs/DOCUMENT-CHECKER.md), [send-boundary tests](test/document-send-boundary.test.mjs) |
+| Candidate lookup | [Thread identity design](docs/THREAD-IDENTITY.md), [tests](test/thread-identity.test.mjs) |
 
 ## Development
+
+Use Node.js 22:
 
 ```sh
 npm ci
 npm test
 ```
 
-Start with `.env.secrets.example.json` and `DEPLOY-VERCEL.md` for configuration. Supply your own accounts, templates, workspace schema, and credentials. Keep automatic activity off while configuring and testing integrations.
+Configuration starts with [.env.secrets.example.json](.env.secrets.example.json) and [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md). Supply your own accounts, workspace schema, templates, and credentials. Keep automatic activity off while configuring and testing integrations.
 
-## Public source
+GitHub Actions runs the test suite on pushes to `main` and pull requests. Tests use simulated providers; passing checks do not establish live integration readiness.
 
-This repository contains a sanitized source snapshot. Example identities, contact details, workspace identifiers, and organization branding are synthetic. Internal operating history, local credentials, production deployment metadata, and private candidate documents are excluded. Configure and validate document templates against your own approved originals before enabling document delivery.
+## Repository scope
 
-Local tests use simulated providers; passing tests do not establish that your live integrations are configured.
+This repository is a sanitized source snapshot. The features above describe included implementations; availability depends on the integrations and permissions configured for a deployment.
 
-GitHub Actions runs the test suite for each public source update and pull request. Its badge reflects those checks. Public updates contain reviewed source changes; private recruiting activity stays in the private operational systems.
+Example identities, contact details, workspace identifiers, and organization branding are synthetic. Internal operating history, credentials, production deployment metadata, and private candidate documents are excluded. Document templates must be configured and validated against your own approved originals before delivery is enabled.
