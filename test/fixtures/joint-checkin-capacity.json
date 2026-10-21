@@ -1,0 +1,104 @@
+{
+  "now": "2026-10-24T00:00:00Z",
+  "busy": [
+    {
+      "start": 1792944000000,
+      "end": 1792951200000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1792953000000,
+      "end": 1792962000000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1792963800000,
+      "end": 1792974600000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1792976400000,
+      "end": 1792978200000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1792980000000,
+      "end": 1792990800000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793030400000,
+      "end": 1793034000000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793037600000,
+      "end": 1793041200000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793043000000,
+      "end": 1793061000000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793062800000,
+      "end": 1793077200000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793116800000,
+      "end": 1793124000000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793125800000,
+      "end": 1793133000000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793134800000,
+      "end": 1793149200000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793151000000,
+      "end": 1793154600000,
+      "summary": "Synthetic busy block"
+    },
+    {
+      "start": 1793156400000,
+      "end": 1793163600000,
+      "summary": "Synthetic busy block"
+    }
+  ],
+  "trials": [
+    {
+      "candidate": {
+        "pageId": "example-0",
+        "fullName": "Alpha Example"
+      },
+      "tz": "Asia/Kolkata",
+      "start": "2026-10-26",
+      "end": "2026-10-26"
+    },
+    {
+      "candidate": {
+        "pageId": "example-1",
+        "fullName": "Beta Example"
+      },
+      "tz": "Europe/London",
+      "start": "2026-10-26",
+      "end": "2026-10-26"
+    },
+    {
+      "candidate": {
+        "pageId": "example-2",
+        "fullName": "Gamma Example"
+      },
+      "tz": "America/Los_Angeles",
+      "start": "2026-10-26",
+      "end": "2026-10-26"
+    }
+  ]
+}

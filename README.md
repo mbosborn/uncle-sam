@@ -80,11 +80,13 @@ Each change has a reason and a record. These learners treat silence as unknown a
 | Contextual candidate lookup | Reads Slack thread context and supported screenshots, extracts identity clues, then re-fetches the matching record. Namesakes and incomplete evidence require clarification. |
 | Interview follow-through | Uses available Meet participation/end evidence or calendar timing. Existing feedback, decisions, withdrawals, and holds are checked before interviewer prompts. |
 | Take-home coordination | Tracks invitation, submission, and human review separately. Reminder timing accounts for current status and stated completion plans. |
-| Trial capacity forecasting | Simulates upcoming trials against team calendars and candidate time zones, reserving each proposed slot in the simulation so overlapping trials compete for the same capacity. Planning creates no live meetings. |
+| Shared trial scheduling | Compares up to 32 trial orderings across eight candidates, using their time zones, interviewer calendars and buffers. The forecast and booking paths share the planner. Existing invitations stay fixed, and each candidate needs a complete verified schedule before booking. |
 | First-check-in protection | Reads back the actual calendar occurrence, required guests, conflicts, time zone, and notice window before emailing a confirmed time. A planned slot alone is insufficient; routine optimization cannot silently move the first meeting. |
 | Document validation | Checks every packet page, recipient, signing field, and candidate-specific term against versioned schemas. Hashes and field fingerprints bind validation receipts to the checked packet. Resends are validated again. |
 | Access lifecycle | Optional Okta and Insightful integrations coordinate onboarding and offboarding, including readback of project/task assignments. |
 | Payout onboarding | A restricted Stripe path collects payout details after a confirmed first check-in. Its client is limited to account and onboarding-link creation; it cannot send payments. |
+
+**A schedule has to work across the whole trial.** Each calendar series contains the exact dates and times selected by the shared plan, including daylight-saving changes and later-day conflicts. Before creating invitations, Uncle Sam rechecks availability, candidate details and holds. Durable reservations coordinate workers; uncertain writes retain their provider IDs for review. The planner uses a bounded search with no additional service or solver dependency. [Scheduling design and tests](docs/JOINT-CHECKINS.md)
 
 ## Architecture
 
@@ -143,7 +145,7 @@ Workflow effects remain isolated across these suites. Only the opt-in model brok
 | --- | --- |
 | Sourcing and calibration | [Ranking](service/lib/sourcing.mjs), [calibration](service/lib/sourcing-calibration.mjs), [tests](test/sourcing-calibration.test.mjs) |
 | Event orchestration | [Vercel handlers](service/lib/vercel-handlers.mjs), [agent runner](service/lib/agent-runner.mjs), [workflow policy](service/lib/workflow-policy.mjs) |
-| Scheduling | [Capacity planner](service/lib/checkin-plan.mjs), [first-check-in design](docs/FIRST-CHECKIN-RELIABILITY.md), [tests](test/first-checkin.test.mjs) |
+| Scheduling | [Shared planner](service/lib/checkin-joint-plan.mjs), [booking design](docs/JOINT-CHECKINS.md), [joint scheduling tests](test/joint-checkins.test.mjs), [first-check-in protection](docs/FIRST-CHECKIN-RELIABILITY.md) |
 | Document delivery | [Validation design](docs/DOCUMENT-CHECKER.md), [send-boundary tests](test/document-send-boundary.test.mjs) |
 | Candidate lookup | [Thread identity design](docs/THREAD-IDENTITY.md), [tests](test/thread-identity.test.mjs) |
 

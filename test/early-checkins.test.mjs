@@ -24,7 +24,7 @@ function world({ banners = [banner], robin = standups } = {}) {
   const events = [], posted = [];
   const calendar = {
     listEvents: async ({ calendarId }) => (calendarId === 'project@company.example' ? banners : ['robin@company.example', 'quinn@company.example'].includes(calendarId) ? robin : []),
-    writeEvent: async w => { events.push(w); return { id: `ev${events.length}` }; },
+    writeEvent: async w => { events.push(w); return { id: w.body.id ?? `ev${events.length}` }; },
   };
   return { calendar, events, posted, poster: async t => posted.push(t) };
 }
