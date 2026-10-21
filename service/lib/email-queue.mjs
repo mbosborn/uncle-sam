@@ -88,7 +88,7 @@ export async function waitingFor({ db, pageId }) {
   const packet = await kv.get(`emailq:packet:${pageId}`);
   if (packetWaiting(packet)) out.push({ kind: 'work trial documents', key: `emailq:packet:${pageId}`, value: packet });
   const invite = await kv.get(`trialinvite:${pageId}`);
-  if (invite && !invite.sentAt && !invite.dropped) out.push({ kind: 'work trial invitation', key: `trialinvite:${pageId}`, value: invite });
+  if (invite && !invite.sentAt && !invite.dropped && !invite.dispatchingAt && !invite.deliveryUncertain) out.push({ kind: 'work trial invitation', key: `trialinvite:${pageId}`, value: invite });
   const payout = await kv.get(`payout:queued:${pageId}`);
   if (payoutWaiting(payout)) out.push({ kind: 'payout setup email', key: `payout:queued:${pageId}`, value: payout });
   const remind = await kv.get(`payout:remindq:${pageId}`);
@@ -128,7 +128,9 @@ export async function cancelWaiting({ db, pageId, clock = Date.now }) {
       const state = await kv.get(it.key);
       if (!accountWaiting(state)) continue;
       await kv.put(it.key, { ...state, account: { ...state.account, stopped: now, stoppedBy: 'cancel_command' } }, now);
-    } else if (it.key.startsWith('trialinvite:')) await kv.put(it.key, { ...it.value, dropped: 'cancelled_by_mason' }, now);
+    } else if (it.key.startsWith('trialinvite:')) {
+      if (!(await kv.compareAndSwap(it.key, it.value, { ...it.value, dropped: 'cancelled_by_mason' }, now))) continue;
+    }
     else if (!(await kv.compareAndSwap(it.key, it.value, { ...it.value, cancelled: now }, now))) continue;
     done.push(it.kind);
   }
@@ -153,6 +155,14 @@ export async function runEmailQueue({ db, notion, packets, poster = null, clock 
         summary.dropped++;
         if (poster && !['already_out', 'gone'].includes(why)) await poster(holdText(q.name, 'work trial documents', why)).catch(() => {});
         continue;
+      }
+      // Approval belongs to this candidate identity. A changed address requires a
+      // fresh instruction; never redirect an already queued packet automatically.
+      if (!q.email || String(c.email ?? '').toLowerCase() !== q.email.toLowerCase() || c.emailVerified === false
+        || (q.name && String(c.fullName ?? '').trim().toLowerCase() !== q.name.trim().toLowerCase())) {
+        await kv.compareAndSwap(key, q, { ...q, dropped: 'identity_changed', at: now }, now);
+        await tellHold({ kv, poster, pageId: q.pageId, name: q.name, what: 'work trial documents', why: 'the candidate identity changed since approval', now });
+        summary.dropped++; continue;
       }
       const currentRate = c.payment?.dailyRate;
       if (currentRate != null && q.rate != null && currentRate !== q.rate) {

@@ -97,6 +97,22 @@ The diagram summarizes shared patterns; individual workflows apply their own che
 - **Persist execution state.** Semantic action keys, atomic claims, and delivery receipts help prevent duplicate work across repeated events and worker runs. Confirmed failures and uncertain sends follow different recovery paths; an unclear delivery result is held for reconciliation.
 - **Keep operational states distinct.** An invitation is not attendance, an uploaded take-home is not a pass, and a queued email is not confirmed delivery. Those distinctions control downstream actions.
 
+## Work-trial replay
+
+The replay suite follows synthetic candidates through interview feedback, deep-dive feedback, recap decisions, fast-tracking and direct document requests. Those paths converge on the real trial queues, document confirmation, account setup and calendar workers. It checks who receives each email, which terms it contains, when it can send, and whether the calendar matches the promise.
+
+```mermaid
+flowchart LR
+  F["Synthetic entry paths<br/>Feedback · recap · direct instruction"] --> W["Production workflow code"]
+  W <--> S["Isolated test world<br/>Temporary libSQL · controlled clock<br/>Scripted providers and model responses"]
+  W --> A["Check expected outcomes<br/>Recipients · terms · timing<br/>Duplicates · calendar guests and conflicts"]
+  A --> R["Replay report<br/>Compare the same scenarios across versions"]
+```
+
+Scenarios include overlapping funnels, changed recipients and terms, cancellations, outages, uncertain delivery, restarts, competing trials and first-meeting revisions. The runner blocks outbound network calls and uses invented data. Version comparison reports improvements and regressions against the same expectations; passing establishes behavior for the scenarios covered.
+
+[Run the suite and compare versions](docs/REPLAY.md) · [Scenario definitions](test/replay/scenarios.mjs)
+
 ## Explore the implementation
 
 | Area | Source and verification |
@@ -114,14 +130,17 @@ Use Node.js 22:
 ```sh
 npm ci
 npm test
+npm run test:replay
 ```
 
 Configuration starts with [.env.secrets.example.json](.env.secrets.example.json) and [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md). Supply your own accounts, workspace schema, templates, and credentials. Keep automatic activity off while configuring and testing integrations.
 
-GitHub Actions runs the test suite on pushes to `main` and pull requests. Tests use simulated providers; passing checks do not establish live integration readiness.
+GitHub Actions runs the existing tests and the work-trial replay suite on pushes to `main` and pull requests. Tests use simulated providers; passing checks do not establish live integration readiness.
 
 ## Repository scope
 
 This repository is a sanitized source snapshot. The features above describe included implementations; availability depends on the integrations and permissions configured for a deployment.
 
 Example identities, contact details, workspace identifiers, and organization branding are synthetic. Internal operating history, credentials, production deployment metadata, and private candidate documents are excluded. Document templates must be configured and validated against your own approved originals before delivery is enabled.
+
+Replay fixtures and reports contain invented data only. Real candidate records, private Notion content and take-home submissions must stay outside this repository; replay reports are local and are not uploaded by CI.

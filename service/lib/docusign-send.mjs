@@ -760,6 +760,8 @@ export async function withFreshDates({ notion, who }) {
   if (!c || c.archived) fail('docusign_document_validation_failed', 'candidate_record_unavailable');
   const now = factsOf(c);
   if (!now.fullName || !now.email) fail('docusign_document_validation_failed', 'candidate_identity_missing');
+  if (String(now.email).toLowerCase() !== String(who.email ?? '').toLowerCase()
+    || String(now.fullName).replace(/\s*\([^)]*\)/g, '').trim().toLowerCase() !== String(who.fullName).replace(/\s*\([^)]*\)/g, '').trim().toLowerCase()) fail('docusign_document_validation_failed', 'candidate_identity_changed');
   // The record's dates win when it has them; dates given on the push-through form stand when it doesn't.
   return { ...who, fullName: now.fullName, email: now.email,
     trialStart: now.trialStart ?? who.trialStart ?? null, trialEnd: now.trialEnd ?? who.trialEnd ?? null };
