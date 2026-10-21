@@ -20,6 +20,7 @@ import { noticeStore } from './stuck-rejections.mjs';
 import { createCheckins, bestDailyTimes, ptTime, CHECKIN_TITLE } from './checkins.mjs';
 import { candidateAddress } from './onboarding.mjs';
 import { trialTimeZone, zonedHM, zonedDate } from './checkin-times.mjs';
+import { holdReason } from './email-queue.mjs';
 
 const NEVER_INVITE = new Set(['parker@company.example', 'shawn@company.example', 'project@company.example']);
 const TENTATIVE = /\b(?:tentative|tbd|tbc|proposed|pending confirmation|to be confirmed|if (?:he|she|they) (?:passes|signs))\b/i;
@@ -98,6 +99,7 @@ export async function ensureCheckins({ db, calendar, canWrite = false, candidate
   try {
     if (!db?.prepare || !candidate?.pageId) return 'no_candidate';
     const kv = noticeStore(db), now = clock(), today = laDate(now), f = candidate.fields ?? {};
+    if (await holdReason({ kv, candidate }) || f['Action Status'] === 'On Hold') return 'candidate_on_hold';
     if (await kv.get(`checkins:${candidate.pageId}`)) return 'already_set_up';
     const start = dayOnly(f['Trial Start']), end = dayOnly(f['Trial End']);
     if (!start || !end || end < start) return 'dates_not_confirmed';
@@ -207,6 +209,9 @@ export async function runWorkTrials({ env, db, notion, claude, calendar, canWrit
     for (const candidate of await notion.listTrialCandidates()) {
       summary.candidates++;
       const f = candidate.fields ?? {}, note = reason => summary.results.push({ candidate: candidate.pageId, reason });
+      // The query excludes closed candidates, but holds can remain in the Trial
+      // stage. Apply the same stop rule before creating any calendar artifacts.
+      if (await holdReason({ kv, candidate }) || f['Action Status'] === 'On Hold') { note('candidate_on_hold'); continue; }
       // Trial dates are the trialer's own (Project, 2026-10-18: "saturday start time always applies to them and not us ... saturday
       // morning start for them ... would be friday night for us"): "started" is their date, not Pacific.
       const theirZone = (await trialTimeZone({ candidate, kv }).catch(() => ({ tz: null }))).tz;

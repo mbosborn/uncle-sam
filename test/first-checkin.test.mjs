@@ -35,7 +35,8 @@ async function setup({ first = '2026-10-24T04:00:00Z', now = '2026-10-23T06:30:0
   await kv.put(firstLockKey('p'), lock, clock());
   await kv.put('checkins:p', reg, clock());
   await kv.put('onboarding:p', { address: 'example@company.example' }, clock());
-  await kv.put(confirmationKey(lock), { state: 'queued', name: candidate.fullName, pageId: 'p', at: clock() }, clock());
+  await kv.put(confirmationKey(lock), { state: 'queued', name: candidate.fullName, pageId: 'p',
+    to: candidate.email, workEmail: 'example@company.example', at: clock() }, clock());
   const params = { lock, reg, candidate, workEmail: 'example@company.example', calendar, now: clock() };
   const run = () => runFirstCheckinConfirmations({ env: { UNCLE_SAM_AUTOMATIC_ACTIVITY: 'enabled' }, db, notion, calendar,
     gmail, clock, poster: async t => notices.push(t) });
@@ -234,6 +235,17 @@ test('first confirmation preserves the 30-minute delay and candidate-specific ca
   assert.deepEqual(await cancelWaiting({ db: f.db, pageId: 'p', clock: f.clock }), ['first check-in confirmation']);
   f.advance(HOLD_MS + 1);
   await f.run(); assert.equal(f.sends.length, 0);
+});
+test('queued confirmation keeps its recipient and work account across runs; unbound legacy queues stay held', async () => {
+  for (const change of ['recipient', 'account', 'name', 'legacy']) {
+    const f = await setup();
+    if (change === 'recipient') f.candidate.email = 'other@example.invalid';
+    if (change === 'account') await f.kv.put('onboarding:p', { address: 'other@company.example' }, f.clock());
+    if (change === 'name') f.candidate.fullName = 'Other Person';
+    if (change === 'legacy') await f.kv.put(confirmationKey(f.lock), { state: 'queued', name: f.candidate.fullName, pageId: 'p', at: f.clock() }, f.clock());
+    await f.run(); f.advance(60000); await f.run();
+    assert.equal(f.sends.length, 0); assert.match(f.notices.join(' '), /recipient or work account changed/);
+  }
 });
 test('an earlier registered occurrence blocks promising the wrong first meeting', async () => {
   const f = await setup();

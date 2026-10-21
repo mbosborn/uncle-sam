@@ -26,3 +26,4 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:replay
+      - run: npm run test:explore -- --runs 100 --seed 20261020

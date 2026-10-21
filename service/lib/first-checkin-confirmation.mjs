@@ -6,7 +6,7 @@ import { datesAgreed } from './work-trial.mjs';
 import { addDays } from './takehome-nudge.mjs';
 import { HOLD_MS, holdReason } from './email-queue.mjs';
 
-export const FIRST_CHECKIN_VERSION = '2026-10-20.1';
+export const FIRST_CHECKIN_VERSION = '2026-10-20.2';
 export const MIN_FIRST_NOTICE_MS = 12 * 3600_000;
 export const confirmationKey = lock => `checkin:confirmation:${lock.pageId}:${lock.at}${lock.revision ? `:${lock.revision.id}` : ''}`;
 const stamp = (at, tz) => new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long', year: 'numeric',
@@ -35,6 +35,7 @@ const explanations = {
   existing_first_email_needs_reconciliation: 'a first-check-in email was already sent and needs to be reconciled',
   first_outside_candidate_hours: 'the meeting falls outside the candidate’s check-in hours',
   first_outside_team_hours: 'the meeting falls outside the team’s scheduling rules',
+  first_recipient_changed: 'the queued recipient or work account changed and needs explicit reconciliation',
 };
 
 /** A sent promise comes from this exact read-back occurrence, never a series target or model-generated time. */
@@ -100,14 +101,21 @@ export async function runFirstCheckinConfirmations({ env = {}, db, notion, calen
       candidateName = candidate?.fullName ?? candidateName;
       if (await holdReason({ kv, candidate })) fail('candidate_not_active');
       if (!prior) {
-        await kv.compareAndSwap(receiptKey, null, { state: 'queued', name: candidateName, pageId: lock.pageId, at: now + HOLD_MS }, now);
+        const workEmail = (await kv.get(`onboarding:${lock.pageId}`))?.address;
+        if (!candidate?.email || candidate.emailVerified === false || !workEmail) fail('first_recipient_changed');
+        await kv.compareAndSwap(receiptKey, null, { state: 'queued', name: candidateName, pageId: lock.pageId,
+          to: candidate.email, workEmail, at: now + HOLD_MS }, now);
         continue;
       }
+      // A queued promise belongs to its original recipient, across restarts as
+      // well as within one worker. Legacy entries without that evidence stay held.
+      if (!prior.to || prior.to !== candidate.email || prior.name !== candidateName || candidate.emailVerified === false) fail('first_recipient_changed');
       if (prior.state === 'queued' && prior.at > now) continue;
       if (!reg || reg.closed || !(await datesAgreed({ kv, candidate }))) fail('trial_dates_unconfirmed');
       if ((await currentZone(candidate, kv, notion, now)) !== lock.tz) fail('candidate_timezone_changed_or_unknown');
       if (await kv.get(`trialterms:hold:${lock.pageId}`)) fail('trial_terms_unresolved');
       const onboarding = await kv.get(`onboarding:${lock.pageId}`);
+      if (!prior.workEmail || prior.workEmail !== onboarding?.address) fail('first_recipient_changed');
       const event = await checkFirstMeeting({ lock, reg, candidate, workEmail: onboarding?.address, calendar, now });
       if (!noticeWindow(lock, now)) continue; // Weekends are allowed; never an overnight first-time notification.
       if (!(await gmail.connected()) || typeof gmail.searchSent !== 'function') fail('gmail_verification_unavailable');
@@ -183,7 +191,7 @@ export async function reviseFirstCheckin({ db, calendar, notion, gmail, pageId, 
     await kv.compareAndSwap(confirmationKey(old), changing, previous, now);
     fail('first_confirmation_changed');
   }
-  await kv.claim(confirmationKey(next), { state: 'queued', name: candidate.fullName, pageId, at: now + HOLD_MS }, now);
+  await kv.claim(confirmationKey(next), { state: 'queued', name: candidate.fullName, pageId, to: candidate.email, workEmail, at: now + HOLD_MS }, now);
   // A write timeout leaves this proposed version protected. Readback/confirmation must resolve it; never blindly roll back.
   await calendar.writeEvent({ calendarId: 'primary', eventId, sendUpdates: 'all', body: {
     start: { dateTime: new Date(next.at).toISOString(), timeZone: next.tz },

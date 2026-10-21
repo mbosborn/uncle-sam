@@ -113,19 +113,27 @@ The diagram summarizes shared patterns; individual workflows apply their own che
 
 ## Work-trial replay
 
-The replay suite follows synthetic candidates through interview feedback, deep-dive feedback, recap decisions, fast-tracking and direct document requests. Those paths converge on the real trial queues, document confirmation, account setup and calendar workers. It checks who receives each email, which terms it contains, when it can send, and whether the calendar matches the promise.
+**The tests check the decisions and the consequences.** Synthetic candidates enter through interview feedback, deep-dive feedback, recap decisions, fast-tracking and direct document requests. Those paths reach the real trial queues, document confirmation, account setup and calendar workers. Assertions check who receives each email, which terms it contains, when it can send, and whether the calendar matches the promise.
 
 ```mermaid
-flowchart LR
-  F["Synthetic entry paths<br/>Feedback · recap · direct instruction"] --> W["Production workflow code"]
-  W <--> S["Isolated test world<br/>Temporary libSQL · controlled clock<br/>Scripted providers and model responses"]
-  W --> A["Check expected outcomes<br/>Recipients · terms · timing<br/>Duplicates · calendar guests and conflicts"]
-  A --> R["Replay report<br/>Compare the same scenarios across versions"]
+flowchart TD
+  A["Authored journeys<br/>Expected decisions and outcomes"] --> W["Production workflow code"]
+  G["Generated event sequences<br/>Changes · cancellations · restarts<br/>Controlled competing workers"] --> W
+  M["Opt-in real model checks<br/>Ambiguous approvals · corrections<br/>Conflicting messages"] --> W
+  W <--> S["Isolated test world<br/>Temporary libSQL · controlled clock<br/>Synthetic service adapters"]
+  W --> C["Check decisions and effects<br/>Recipients · dates · holds · duplicates"]
+  C --> R["Reproducible evidence<br/>Version comparisons · reduced failures<br/>Model results and usage"]
 ```
 
-Replays cover realistic hiring journeys, including interruptions and changed decisions, to check email accuracy, calendar consistency, and duplicate prevention. The runner blocks outbound network calls and uses invented data. Version comparison runs the same scenarios and expectations against both revisions, reporting improvements and regressions. Fewer actions alone do not count as better behavior; the recipients, terms, timing, and calendar effects must match expectations. Passing establishes behavior for the scenarios covered.
+**Authored replay proves expected behavior across a complete journey.** The same scenarios run against two code revisions to expose regressions. Fewer actions alone do not count as an improvement; the expected recipients, terms, timing and calendar effects still have to match.
 
-[Run the suite and compare versions](docs/REPLAY.md) · [Scenario definitions](test/replay/scenarios.mjs)
+**Generated replay searches for combinations we did not think to write.** fast-check varies event sequences and the order in which competing workers reach simulated services. Failures are reduced to a reproducible sequence with a saved seed and scheduling order. Once corrected, that sequence joins the permanent regression tests. This helps protect against stale dates, duplicate delivery and work that resumes after a cancellation or hold.
+
+**Fresh model evaluations test whether the instruction was understood.** A separate suite asks the configured model to interpret approvals, corrections, cancellations and conflicting messages using the production prompts. It checks the proposed decision as well as the resulting workflow, so a mistaken approval fails even if another guard catches it later. Repeated runs record the actual model, token usage and source version, with limits on requests and output tokens.
+
+Workflow effects remain isolated in all three suites. Only the opt-in model broker can reach the configured model API; it receives synthetic conversations. Candidate services stay disconnected, reports stay local, and CI runs the offline checks without model credentials. Passing establishes behavior for the cases and schedules tested, not every possible event or instruction.
+
+[Run the suites](docs/REPLAY.md) · [Authored scenarios](test/replay/scenarios.mjs) · [Generated exploration](test/replay/generated.mjs) · [Model decision cases](test/model-eval/scenarios.mjs)
 
 ## Explore the implementation
 
@@ -145,11 +153,12 @@ Use Node.js 22:
 npm ci
 npm test
 npm run test:replay
+npm run test:explore
 ```
 
 Configuration starts with [.env.secrets.example.json](.env.secrets.example.json) and [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md). Supply your own accounts, workspace schema, templates, and credentials. Keep automatic activity off while configuring and testing integrations.
 
-GitHub Actions runs the existing tests and the work-trial replay suite on pushes to `main` and pull requests. Tests use simulated providers; passing checks do not establish live integration readiness.
+GitHub Actions runs the existing tests, retained regressions, authored replay and a seeded generated exploration on pushes to `main` and pull requests. Fresh model evaluations run separately when explicitly requested. Tests use simulated providers; passing checks do not establish live integration readiness.
 
 ## Repository scope
 

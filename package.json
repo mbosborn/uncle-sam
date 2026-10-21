@@ -16,7 +16,9 @@
     "setup:check": "node scripts/setup.mjs check",
     "setup:env": "node scripts/setup.mjs env",
     "setup:verify": "node scripts/setup.mjs verify",
-    "test:replay": "node scripts/replay.mjs"
+    "test:replay": "node scripts/replay.mjs",
+    "test:model": "node scripts/model-eval.mjs",
+    "test:explore": "node scripts/explore.mjs"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",
@@ -25,6 +27,7 @@
     "pdfjs-dist": "6.4.299"
   },
   "devDependencies": {
-    "drizzle-orm": "0.45.2"
+    "drizzle-orm": "0.45.2",
+    "fast-check": "4.10.2"
   }
 }
