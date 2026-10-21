@@ -6,7 +6,7 @@
 ![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=black)
 
-Uncle Sam finds candidates through Wrangle, uses reviewer feedback to refine future searches, and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
+Uncle Sam turns role requirements and reviewer feedback into targeted sourcing strategies, using Wrangle to search for and enrich candidates. It ranks profiles against evidence of the work and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
 
 Its core design combines model-based interpretation with explicit workflow rules and durable state. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again.
 
@@ -36,7 +36,7 @@ flowchart TD
 
 ## Feedback-driven sourcing
 
-**Wrangle is part of the search and review loop.** An OAuth-authenticated MCP integration supports people search, LinkedIn profile resolution, email enrichment, and collections. Results join a shared pool, and shown or selected profiles can be saved back to Wrangle. Prior coverage helps avoid repeatedly surfacing the same people and companies.
+**Wrangle brings natural-language people search directly into the workflow.** Its [MCP integration](https://wrangle.ai/developers) lets Uncle Sam run detailed candidate searches, resolve LinkedIn profiles, enrich emails, and save results to collections through one connection. Uncle Sam supplies the role-specific queries, reviewer context, and selection rules. Results join a shared pool; shown and selected profiles can be saved back to Wrangle, while prior coverage helps avoid repeatedly surfacing the same people and companies.
 
 **Review history becomes structured search context.** The history pass reads profile lists with authorized reviewers' thread replies, reactions, and available Wrangle collection feedback. It preserves picks, explicit passes, people not selected from a reviewed batch, and the reasons given. Unreviewed lists contribute no preference signal; interview outcomes and compensation discussions stay separate from profile-selection feedback.
 

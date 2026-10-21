@@ -39,7 +39,7 @@ Additional scenarios exercise:
 
 - Cancellation, holds, withdrawal and pay concerns while mail is queued.
 - Recipient changes, corrected rates/dates, and changes during slow verification calls.
-- Mailbox outages, uncertain delivery, restarts and repeated decisions.
+- Mailbox outages, uncertain delivery, restarts and repeated decisions. Newer cancellations, holds, withdrawals and pay corrections override stale retries; a freshly authorized correction still waits before sending.
 - Document validation failure without a misleading “documents sent” email.
 - Personal versus work addresses, team-only calendar banners, exact dates and time-zone conversion.
 - Required-interviewer conflicts, incomplete calendars, missing/declined guests and moved invitations.

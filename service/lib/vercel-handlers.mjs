@@ -228,7 +228,7 @@ export function createVercelApp({ env = process.env, schedule, fetchImpl = globa
       // Unauthenticated: booleans only, never values.
       return json({ service: 'Uncle Sam', host: 'vercel', phase: enabled ? 'phase2-live' : 'setup', automaticActionsEnabled: enabled,
         documentChecker: { enabled: true, version: '2026-10-20.1', failureMode: 'block_send_and_resend' },
-        reliabilityVersion: '2026-10-20.2', candidateDiscoveryVersion: '2026-10-20.1', sourcingCalibrationVersion: '2026-10-20.1', firstCheckinVersion: FIRST_CHECKIN_VERSION, threadIdentityVersion: THREAD_IDENTITY_VERSION, recapAckVersion: RECAP_ACK_VERSION,
+        workTrialSafetyVersion: '2026-10-20.1', reliabilityVersion: '2026-10-20.2', candidateDiscoveryVersion: '2026-10-20.1', sourcingCalibrationVersion: '2026-10-20.1', firstCheckinVersion: FIRST_CHECKIN_VERSION, threadIdentityVersion: THREAD_IDENTITY_VERSION, recapAckVersion: RECAP_ACK_VERSION,
         // Account creation (accounts.mjs): 'ready' or what is still missing, in plain words.
         configuration: { ...describeConfiguration(config), cron: secretOk(env.CRON_SECRET), databaseReachable, ...(gmailConfigured(config) ? { gmailGrant, ...(directory ? { directory } : {}) } : {}),
           ...(gmailConfigured(config) && accountCreationWanted(config) ? { accountCreation: await accountCreationMissing({ env: config, db: config.DB, notion: createRuntime(config, { fetchImpl, clock }).notion }).then(m => (m.length ? m : 'ready')).catch(() => 'unknown'), slackJoinLink: /^https:\/\//.test(config.UNCLE_SAM_SLACK_JOIN_URL ?? '') ? (() => { try { const u = new URL(config.UNCLE_SAM_SLACK_JOIN_URL); return `${u.host}${u.pathname.slice(0, 40)}`; } catch { return 'invalid'; } })() : false } : {}),

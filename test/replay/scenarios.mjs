@@ -77,6 +77,7 @@ const scenario = (id, title, run, options = {}) => scenarios.push({ id, title, r
 for (const [id, author, dates] of [['interview-feedback', 'robin', false], ['deep-dive-feedback', 'interviewer', false], ['fast-track-with-dates', 'robin', true]]) {
   scenario(id, `${id}: authorized feedback through documents and check-ins`, async w => {
     await w.step('authorized interview feedback reaches the trial queue', async () => {
+      assert.equal(typeof w.m.agent.PEOPLE[author], 'string', 'entry path must use its intended authority');
       const r = await w.feedback({ author: w.m.agent.PEOPLE[author], dates }); assert.equal(r.outcome, 'record_feedback', JSON.stringify(r));
     }); await finishTrial(w, { invite: !dates });
   }, { dates });
@@ -124,6 +125,28 @@ scenario('invite-outage-recovery', 'Mailbox outage waits, then invitation resume
   await queuedInvite(w);
   await w.step('unavailable Sent mail cannot be treated as empty', async () => { w.fail('gmail.search'); await w.invites(); noMail(w); });
   await w.step('recovery survives restart without duplicate delivery', async () => { w.recover('gmail.search'); await w.restart(); w.advance(10 * MIN); await w.invites(); await w.invites(); assert.equal(w.emails.length, 1); });
+});
+for (const change of ['cancel', 'hold', 'withdrawal', 'rate']) scenario(`outage-newer-${change}`, `Recovery honors the newer ${change} instead of the old pending decision`, async w => {
+  await queuedInvite(w);
+  await w.step('outage leaves the original invitation pending', async () => {
+    w.fail('gmail.search'); await w.invites(); noMail(w);
+    assert.equal((await w.kv.get(`trialinvite:${PERSON}`)).retryAttempts, 1);
+  });
+  await w.step('a later decision survives restart and stops the stale send', async () => {
+    if (change === 'cancel') await w.m.queue.cancelWaiting({ db: w.db, pageId: PERSON, clock: w.clock });
+    if (change === 'hold') w.set({ Outcome: 'On Hold' });
+    if (change === 'withdrawal') w.set({ Outcome: 'Withdrawn or Unavailable' });
+    if (change === 'rate') w.set({ 'Daily Trial Rate': 225 });
+    w.recover('gmail.search'); await w.restart(); w.advance(10 * MIN);
+    await w.invites(); await w.invites(); noMail(w);
+    assert.equal(w.envelopes.length, 0); assert.equal(w.calendarWrites.length, 0);
+  });
+  if (change === 'rate') await w.step('fresh authorized feedback sends the corrected rate once after a new delay', async () => {
+    await w.feedback({ id: 'authorized-rate-correction' }); await w.invites(); noMail(w);
+    w.advance(35 * MIN); await w.invites(); await w.restart(); await w.invites();
+    assert.equal(w.emails.length, 1); assert.equal(w.emails[0].to, email);
+    assert.match(w.emails[0].body, /US\$225 per day/); assert.doesNotMatch(w.emails[0].body, /US\$150/);
+  });
 });
 scenario('uncertain-invite-delivery', 'Unknown email delivery never retries automatically', async w => {
   await queuedInvite(w);
