@@ -91,7 +91,7 @@ test('health reports booleans and counts only, with a real database probe, and n
     const text = await response.text();
     for (const value of everySecret) assert.equal(text.includes(value), false, 'no secret value appears in the body');
     assert.deepEqual(JSON.parse(text), { service: 'Uncle Sam', host: 'vercel', phase: 'setup', automaticActionsEnabled: false,
-      documentChecker: { enabled: true, version: '2026-10-20.1', failureMode: 'block_send_and_resend' }, reliabilityVersion: '2026-10-20.2', candidateDiscoveryVersion: '2026-10-20.1', sourcingCalibrationVersion: '2026-10-20.1', firstCheckinVersion: '2026-10-20.1', threadIdentityVersion: '2026-10-20.1', recapAckVersion: '2026-10-20.5', configuration: {
+      documentChecker: { enabled: true, version: '2026-10-20.1', failureMode: 'block_send_and_resend' }, workTrialSafetyVersion: '2026-10-20.1', reliabilityVersion: '2026-10-20.2', candidateDiscoveryVersion: '2026-10-20.1', sourcingCalibrationVersion: '2026-10-20.1', firstCheckinVersion: '2026-10-20.1', threadIdentityVersion: '2026-10-20.1', recapAckVersion: '2026-10-20.5', configuration: {
       database: true, automaticActivity: 'off', slackSigning: true, slackBot: true, slackBotIdentity: true, notion: true, notionWebhook: true,
       portalWebhook: true, anthropic: true, openrouter: false, llm: 'anthropic', model: 'fixture-model-1', questions: 'off', questionAskers: 'n/a',
       wispr: false, gmail: false, rejectionSender: 'notion-agent', calendarSource: 'google', calendar: false, calendarIds: 0, calendarFloor: 'unset', interviewerEmails: 0, routes: 2,

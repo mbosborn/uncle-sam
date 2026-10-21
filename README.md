@@ -6,9 +6,9 @@
 ![Node.js 22](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=black)
 
-Uncle Sam finds candidates through Wrangle, uses reviewer feedback to refine future searches, and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
+Uncle Sam turns role requirements and reviewer feedback into targeted sourcing strategies, using Wrangle to search for and enrich candidates. It ranks profiles against evidence of the work and coordinates LinkedIn and email outreach. Once a candidate enters the recruiting process, it handles interview follow-ups, take-home coordination, work-trial scheduling, paperwork, and onboarding through Slack and connected services.
 
-Its core design combines model-based interpretation with explicit workflow rules and durable state. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again.
+The model helps interpret context; explicit workflow rules and durable state decide what can run. Profile evidence informs ranking, human decisions authorize next steps, and delivery receipts determine what can safely run again. The details have to line up, from the agreed trial terms to the email and calendar invite.
 
 [Workflow](#workflow) · [Sourcing](#feedback-driven-sourcing) · [Outreach](#conversation-aware-outreach) · [Architecture](#architecture) · [Development](#development)
 
@@ -36,11 +36,11 @@ flowchart TD
 
 ## Feedback-driven sourcing
 
-**Wrangle is part of the search and review loop.** An OAuth-authenticated MCP integration supports people search, LinkedIn profile resolution, email enrichment, and collections. Results join a shared pool, and shown or selected profiles can be saved back to Wrangle. Prior coverage helps avoid repeatedly surfacing the same people and companies.
+**Wrangle brings natural-language people search directly into the workflow.** Its [MCP integration](https://wrangle.ai/developers) lets Uncle Sam run detailed candidate searches, resolve LinkedIn profiles, enrich emails, and save results to collections through one connection. Uncle Sam supplies the role-specific queries, reviewer context, and selection rules. Results join a shared pool; shown and selected profiles can be saved back to Wrangle, while prior coverage helps avoid repeatedly surfacing the same people and companies.
 
 **Review history becomes structured search context.** The history pass reads profile lists with authorized reviewers' thread replies, reactions, and available Wrangle collection feedback. It preserves picks, explicit passes, people not selected from a reviewed batch, and the reasons given. Unreviewed lists contribute no preference signal; interview outcomes and compensation discussions stay separate from profile-selection feedback.
 
-**Ranking uses evidence about the work.** Role-specific preferences capture relevant projects, teams, technical work, and career paths. Explicit calibration overrides conflicting inferred preferences. For roles configured to require it, a selected profile must include an exact supporting quote from its supplied description. Batch size is a ceiling, so weak evidence can produce fewer results instead of quota padding. These checks establish support in the source text, not independent verification of a profile's claims.
+**Ranking uses evidence about the work.** Role-specific preferences capture relevant projects, teams, technical work, and career paths. Explicit calibration overrides conflicting inferred preferences. For roles configured to require it, a selected profile must include an exact supporting quote from its supplied description. Batch size is a ceiling. If the evidence is weak, Uncle Sam can return fewer people instead of filling the list just to hit a number. These checks establish support in the source text, not independent verification of a profile's claims.
 
 The resulting signals influence both search planning and ranking, including suggestions for adjacent companies and less-covered sources. This is persisted feedback used as model context, rather than model-weight training.
 
@@ -109,7 +109,7 @@ flowchart LR
   A --> R["Replay report<br/>Compare the same scenarios across versions"]
 ```
 
-Scenarios include overlapping funnels, changed recipients and terms, cancellations, outages, uncertain delivery, restarts, competing trials and first-meeting revisions. The runner blocks outbound network calls and uses invented data. Version comparison reports improvements and regressions against the same expectations; passing establishes behavior for the scenarios covered.
+Replays cover realistic hiring journeys, including interruptions and changed decisions, to check email accuracy, calendar consistency, and duplicate prevention. The runner blocks outbound network calls and uses invented data. Version comparison reports improvements and regressions against the same expectations; passing establishes behavior for the scenarios covered.
 
 [Run the suite and compare versions](docs/REPLAY.md) · [Scenario definitions](test/replay/scenarios.mjs)
 
