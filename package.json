@@ -18,7 +18,8 @@
     "setup:verify": "node scripts/setup.mjs verify",
     "test:replay": "node scripts/replay.mjs",
     "test:model": "node scripts/model-eval.mjs",
-    "test:explore": "node scripts/explore.mjs"
+    "test:explore": "node scripts/explore.mjs",
+    "test:mutate": "node scripts/mutate.mjs"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",
@@ -27,7 +28,14 @@
     "pdfjs-dist": "6.4.299"
   },
   "devDependencies": {
+    "@stryker-mutator/api": "10.0.0",
+    "@stryker-mutator/core": "10.0.0",
     "drizzle-orm": "0.45.2",
     "fast-check": "4.10.2"
+  },
+  "overrides": {
+    "typed-rest-client": {
+      "qs": "6.16.1"
+    }
   }
 }

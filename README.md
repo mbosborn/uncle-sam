@@ -131,9 +131,11 @@ flowchart TD
 
 **Fresh model evaluations test whether the instruction was understood.** A separate suite asks the configured model to interpret approvals, corrections, cancellations and conflicting messages using the production prompts. It checks the proposed decision as well as the resulting workflow, so a mistaken approval fails even if another guard catches it later. Repeated runs record the actual model, token usage and source version, with limits on requests and output tokens.
 
-Workflow effects remain isolated in all three suites. Only the opt-in model broker can reach the configured model API; it receives synthetic conversations. Candidate services stay disconnected, reports stay local, and CI runs the offline checks without model credentials. Passing establishes behavior for the cases and schedules tested, not every possible event or instruction.
+**Mutation testing checks whether those tests would notice a broken safeguard.** Stryker deliberately bypasses selected recipient, cancellation, compensation and calendar checks in temporary source copies. The relevant replay assertions must fail. It also forces each check to block valid work, so preventing every send cannot earn a pass. Crashes and timeouts do not count as caught safeguards.
 
-[Run the suites](docs/REPLAY.md) · [Authored scenarios](test/replay/scenarios.mjs) · [Generated exploration](test/replay/generated.mjs) · [Model decision cases](test/model-eval/scenarios.mjs)
+Workflow effects remain isolated across these suites. Only the opt-in model broker can reach the configured model API; it receives synthetic conversations. Candidate services stay disconnected, reports stay local, and CI runs the offline checks without model credentials. Passing establishes behavior for the cases and schedules tested, not every possible event or instruction.
+
+[Run the suites](docs/REPLAY.md) · [Authored scenarios](test/replay/scenarios.mjs) · [Generated exploration](test/replay/generated.mjs) · [Model decision cases](test/model-eval/scenarios.mjs) · [Mutation testing](docs/MUTATION-TESTING.md)
 
 ## Explore the implementation
 
@@ -154,11 +156,12 @@ npm ci
 npm test
 npm run test:replay
 npm run test:explore
+npm run test:mutate
 ```
 
 Configuration starts with [.env.secrets.example.json](.env.secrets.example.json) and [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md). Supply your own accounts, workspace schema, templates, and credentials. Keep automatic activity off while configuring and testing integrations.
 
-GitHub Actions runs the existing tests, retained regressions, authored replay and a seeded generated exploration on pushes to `main` and pull requests. Fresh model evaluations run separately when explicitly requested. Tests use simulated providers; passing checks do not establish live integration readiness.
+GitHub Actions runs the existing tests, retained regressions, authored replay, a seeded generated exploration and the safeguard mutation campaign on pushes to `main` and pull requests. Fresh model evaluations run separately when explicitly requested. Tests use simulated providers; passing checks do not establish live integration readiness.
 
 ## Repository scope
 

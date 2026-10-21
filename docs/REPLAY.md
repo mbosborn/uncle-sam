@@ -10,6 +10,7 @@ Use Node.js 22 and the repository's installed dependencies:
 npm ci
 npm test
 npm run test:replay
+npm run test:mutate
 npm run test:replay -- --report .local/replay/current.json
 npm run test:replay -- --compare-ref main --report .local/replay/comparison.json
 npm run test:replay -- --scenario overlapping-funnels
@@ -22,6 +23,8 @@ A failing scenario or unexpected external I/O attempt exits nonzero. The compari
 Reports contain source and suite hashes, the Git revision and working-tree status, each scenario's steps, simulated elapsed time, recorded model-call counts, email/document/calendar effects, assertions that failed and comparison results. They do not estimate live model cost or score hiring quality. Generated fixture passwords are redacted before export.
 
 ## Covered paths
+
+[Mutation testing](MUTATION-TESTING.md) checks the tests themselves by deliberately bypassing selected recipient, cancellation, compensation and calendar guards in isolated source copies. The corresponding replay assertions must fail. Execution errors and timeouts do not count as successful detection.
 
 | Path | Expected behavior |
 | --- | --- |

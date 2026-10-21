@@ -299,3 +299,44 @@ scenario('account-recipient-changes-during-template-read', 'Credential delivery 
     await w.restart(); await w.onboard(); noMail(w);
   });
 });
+
+for (const change of ['identity', 'rate', 'hold']) scenario(`invite-${change}-during-check`, `A ${change} correction during Sent-mail verification stops the stale invitation`, async w => {
+  await queuedInvite(w);
+  await w.step('fresh evidence wins over the earlier candidate snapshot', async () => {
+    w.hooks.set('gmail.search', () => w.set(change === 'identity' ? { Email: 'other-person@example.invalid' }
+      : change === 'rate' ? { 'Daily Trial Rate': 225 } : { Outcome: 'On Hold' }));
+    await w.invites(); noMail(w);
+  });
+});
+scenario('packet-unapproved-rate-change', 'A changed tracker rate cannot silently reuse old packet approval', async w => {
+  await queuedPacket(w);
+  await w.step('mismatched pay holds documents and confirmation', async () => {
+    w.set({ 'Daily Trial Rate': 225 }); await w.documents();
+    noMail(w); assert.equal(w.envelopes.length, 0);
+  });
+});
+scenario('cancel-during-packet-check', 'Cancellation during candidate verification wins over the stale packet worker', async w => {
+  await queuedPacket(w);
+  await w.step('cancel after the queue was read but before dispatch is reserved', async () => {
+    w.hooks.set('notion.candidate', () => w.m.queue.cancelWaiting({ db: w.db, pageId: PERSON, clock: w.clock }));
+    await w.documents(); noMail(w); assert.equal(w.envelopes.length, 0);
+  });
+});
+scenario('first-recipient-change', 'A queued calendar confirmation cannot transfer to a different recipient', async w => {
+  await registered(w);
+  await w.step('recipient correction holds the previous confirmation across restart', async () => {
+    w.set({ Email: 'other-person@example.invalid' }); await w.restart(); await w.confirm(); noMail(w);
+  });
+});
+scenario('account-credentials-delivered-once', 'Valid account setup sends credentials to the approved recipient once', async w => {
+  w.set({ Stage: 'Trial', Paperwork: 'Signed', 'Trial Start': '2026-10-24', 'Trial End': '2026-10-25' });
+  await w.step('valid setup waits, then sends to the authorized personal email', async () => {
+    await w.onboard(); noMail(w); assert.equal(w.createdAccounts.length, 0);
+    w.advance(30 * MIN); await w.onboard();
+    assert.equal(w.createdAccounts.length, 1); assert.equal(w.emails.length, 1);
+    assert.equal(w.createdAccounts[0].recoveryEmail, email); assert.equal(w.emails[0].to, email);
+    assert.ok(w.emails[0].body.includes(w.createdAccounts[0].address));
+    assert.ok(w.emails[0].body.includes(w.createdAccounts[0].password));
+    await w.restart(); await w.onboard(); assert.equal(w.emails.length, 1); assert.equal(w.createdAccounts.length, 1);
+  });
+});
