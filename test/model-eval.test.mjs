@@ -54,3 +54,11 @@ test('isolated model worker accepts a valid interpretation and never inherits pr
     assert.ok(!JSON.stringify(result).includes('must-not-inherit'));
   } finally { if (previous === undefined) delete process.env.TURSO_AUTH_TOKEN; else process.env.TURSO_AUTH_TOKEN = previous; }
 });
+
+test('lookup-only tool calls are not a completed model decision', async () => {
+  const result = await runEvaluation({ root, repeat: 1, scenario: 'feedback-conditional', client: { complete: async () => response([
+    { type: 'tool_use', id: 'lookup-only', name: 'read_candidate', input: {} },
+  ]) } });
+  assert.equal(result.passed, false);
+  assert.match(result.scenarios[0].error, /eval_missing_model_decision/);
+});
